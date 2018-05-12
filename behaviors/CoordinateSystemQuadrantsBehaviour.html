@@ -1,0 +1,65 @@
+<link rel="import" href="../../../scripts/namespace.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.CoordinateSystemQuadrants = {
+
+            /**
+             * Coordinate system has four quadrants
+             * I : (x,y)
+             * II : (-x,y)
+             * III : (-x, -y)
+             * IV : (x, y)
+             *
+             * @param {Object} point
+             */
+            determineQuadrantsSigns: function(point) {
+                var center = this.getCenter();
+                var quadrants = {
+                    x: 1,
+                    y: 1,
+                    quadrant: 'I'
+                };
+
+                // x
+                if (point.x >= center.horizontal) {
+                    quadrants.x = 1;
+                } else {
+                    quadrants.x = -1;
+                }
+
+                // y
+                if (point.y <= center.vertical) {
+                    quadrants.y = 1;
+                } else {
+                    quadrants.y = -1;
+                }
+
+                quadrants.quadrant = this.determineQuadrant(quadrants);
+
+                return quadrants;
+            },
+
+            /**
+             * @see CoordinateSystemQuadrants.determineQuadrantsSigns
+             *
+             * @param {Object} quadrants
+             */
+            determineQuadrant: function(quadrants) {
+                if (quadrants.x === 1 && quadrants.y === 1) {
+                    return 'I';
+                } else if (quadrants.x === -1 && quadrants.y === 1) {
+                    return 'II';
+                } else if (quadrants.x === -1 && quadrants.y === -1) {
+                    return 'III';
+                } else if (quadrants.x === 1 && quadrants.y === -1) {
+                    return 'IV';
+                } else {
+                    return 'Unknown';
+                }
+            }
+        }
+    });
+</script>

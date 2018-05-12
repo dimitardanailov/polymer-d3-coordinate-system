@@ -1,0 +1,135 @@
+<link rel="import" href="../../../../scripts/namespace.html">
+
+<script>
+
+    namespace('App.Interactions.Graphs.CoordinateSystem.TextItems.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.Label = {
+
+            properties: {
+                xAxisLabel: {
+                    type: String,
+                    value: 'X label'
+                },
+
+                yAxisLabel: {
+                    type: String,
+                    value: 'Y label'
+                },
+
+                graphLabelSettings: {
+                    type: Object,
+                    value: {
+                        xAxis: {
+                            offset: 610, // px
+                            fontSize: '12px'
+                        },
+                        yAxis: {
+                            offset: 25, // px
+                            fontSize: '12px'
+                        }
+                    }
+                }
+            },
+
+            drawCoordinateSystemLabels: function() {
+                // Draw x axis label
+                this.drawCoordinateSystelHorizontalLabel();
+
+                // Draw y axis label
+                this.drawCoordinateSystemVerticalLabel();
+            },
+
+            drawCoordinateSystelHorizontalLabel: function() {
+                if (this.xAxisLabel.length === 0) {
+                    return;
+                }
+
+                var textAttributes = this.__getCoordinateSystemHorizontalLabelAttributes();
+
+                // Append x label to svgContainer
+                this.__appendCoordinateSystemLabel(textAttributes, this.xAxisLabel);
+            },
+
+            drawCoordinateSystemVerticalLabel: function() {
+                if (this.yAxisLabel.length === 0) {
+                    return;
+                }
+
+                var textAttributes = this.__getCoordinateSystemVerticalLabelAttributes();
+
+                // Append y label to svgContainer
+                this.__appendCoordinateSystemLabel(textAttributes, this.yAxisLabel);
+            },
+
+            /**
+             * Method is merging global label configurations and x axis configurations
+             */
+            __getCoordinateSystemHorizontalLabelAttributes: function() {
+                // Get global configurations
+                var textAttributes = this.__getCoordinateSystemLabelAttributes();
+
+                // Override font size
+                textAttributes['font-size'] = this.graphLabelSettings.xAxis.fontSize;
+
+                // @see App.Interactions.Graphs.D3.Behaviors.Margin
+                var centerVertical = this.calculateVerticalCenterByMarginProperties();
+                var fontSize = parseInt(textAttributes['font-size'].replace('px', ''));
+                textAttributes['y'] = centerVertical + (fontSize / 2);
+
+                textAttributes['x'] = this.graphLabelSettings.xAxis.offset;
+
+                return textAttributes;
+            },
+
+            __getCoordinateSystemVerticalLabelAttributes: function() {
+                // Get global configurations
+                var textAttributes = this.__getCoordinateSystemLabelAttributes();
+
+                // Override font size
+                textAttributes['font-size'] = this.graphLabelSettings.yAxis.fontSize;
+
+                // @see App.Interactions.Graphs.D3.Behaviors.Margin
+                var centerHorizontal = this.calculateHorizontalCenterByMarginProperties();
+                textAttributes['x'] = centerHorizontal;
+
+                textAttributes['y'] = this.graphLabelSettings.yAxis.offset + this.graphTitleSettings.y;
+
+                return textAttributes;
+            },
+
+            /**
+             * Method is generating shared configurations for both axis (x axis and y axis)
+             */
+            __getCoordinateSystemLabelAttributes: function() {
+
+
+                var settings = this.graphTitleSettings;
+                var textAttributes = {
+                    'text-anchor': 'middle',
+                    'alignment-baseline': 'auto',
+                    'font-size': '12px',
+                    'font-family': 'Verdana',
+                    'pointer-events': 'none',
+                    'class': 'axis-label not-selectable-item'
+                };
+
+                return textAttributes;
+            },
+
+            /**
+             * @param {Object} textAttributes
+             * @param {String} label
+             */
+            __appendCoordinateSystemLabel: function(textAttributes, label) {
+                this.svgContainer
+                    .append('text')
+                        .attr(textAttributes)
+                        .text(function() {
+                            return label;
+                        });
+            }
+        };
+    });
+</script>

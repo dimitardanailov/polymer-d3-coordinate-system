@@ -1,0 +1,58 @@
+<link rel="import" href="../../../../scripts/namespace.html">
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Styles.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.Circle = {
+
+            /**
+             * Method is calling App.Interactions.Graphs.CoordinateSystem.Behaviors.CoordinateSystemTapHover#_onTapDefaultBehavior
+             * and add an addtional information about the fill opacity
+             * If openPoint property is equal to true - fill opacity be equal to 0.0
+             *
+             * @param {Object} currentElement
+             *
+             * @param {Object} dot
+             */
+            _onTapGenerateOpenOrClosedPoint: function(currentElement) {
+                // @see App.Interactions.Graphs.CoordinateSystem.Behaviors.CoordinateSystemTapHover
+                this._onTapDefaultBehavior(currentElement);
+
+                var dot = this.coordinates;
+                dot['openPoint'] = this.pointsAreOpen ? true : false;
+
+                return dot;
+            },
+
+            /**
+             * @param {Object} currentElement
+             */
+            mouseOverCircleStyle: function(currentElement) {
+                this.updateCircleStyle(
+                    this.d3.select(currentElement),
+                    (this.settings.dots.radius * 1.2)
+                );
+            },
+
+            /**
+             * @param {Object} currentElement
+             */
+            defaultCircleStyle: function(currentElement) {
+                this.updateCircleStyle(
+                    this.d3.select(currentElement),
+                    (this.settings.dots.radius)
+                );
+            },
+
+            /**
+             * @param {Object} circle
+             * @param {Number} radius
+             */
+            updateCircleStyle: function(circle, radius) {
+                circle.attr({
+                    r: radius
+                });
+            }
+        }
+    });
+</script>

@@ -1,0 +1,530 @@
+<link rel="import" href="../../../../scripts/namespace.html">
+
+<!-- d3 plugins -->
+<link rel="import" href="../../plugins/d3-collections/d3-collections.html">
+<!-- d3 plugins -->
+
+<link rel="import" href="../CoordinateSystemSharedPropertiesBehaviour.html">
+<link rel="import" href="../CoordinateSystemToolbarBehaviour.html">
+
+<!--
+Shared properties:
+1. containerLines
+-->
+<link rel="import" href="CoordinateSystemLineSharedPropertiesBehavior.html">
+<link rel="import" href="CoordinateSystemLineEndPointsBehaviour.html">
+<link rel="import" href="CoordinateSystemLineShadeGridBehaviour.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Line.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.Line = [
+            App.Interactions.Graphs.CoordinateSystem.Behaviors.SharedProperties,
+            App.Interactions.Graphs.CoordinateSystem.Behaviors.ToolBar,
+
+            App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.SharedProperties,
+            App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.Endpoints,
+            App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.ShadeToGrid, {
+
+            properties: {
+
+                /**
+                 * @property App.Interactions.Graphs.D3.GeometricFigures.Behaviors.Line.drawLines
+                 * is method for drawing lines and return an array with drawn items
+                 */
+                coordinateSystemLines: {
+                    type: Array,
+                    value: []
+                }
+            },
+
+            /***** INITIALIZERS *****/
+
+            initializeMathematicalLines: function() {
+                // Main container
+                this.initializeLineMainContainer();
+
+                // Transform qti drawing settings to d3js configurations
+                this.transformQtiLineSettingsToD3Configurations();
+
+                // Draw backend lines
+                this.drawQTIXMLLines();
+            },
+
+            initializeLineMainContainer: function() {
+                this.containerLines = this.containerTempObjects
+                    .append('g')
+                    .attr('class', this.settings.lines.containerClassName);
+            },
+
+            initializeBackendLineCollections: function() {
+                this.coordinateResponseData.lines = [];
+            },
+            /***** INITIALIZERS *****/
+
+            /***** QTI  *****/
+
+            /**
+             * Method is overriding the d3js setting with qti configurations
+             */
+            transformQtiLineSettingsToD3Configurations: function() {
+                if (typeof this.coordinateSystemDrawingTypes === 'undefined' || !this.coordinateSystemDrawingTypes.hasOwnProperty('lines')) {
+                    return;
+                }
+
+                var settings = this.coordinateSystemDrawingTypes.lines;
+
+                // Update the maximumItemsPerPage
+                // @see App.Interactions.Graphs.D3.Behaviors.Base
+                this.settings.lines.maximumItems = this.updateD3VariableWithQtiVariable(
+                    settings.maximumItemsPerPage,
+                    this.settings.lines.maximumItems
+                );
+
+                // Update the normal styles
+                if (settings.hasOwnProperty('styleNormalState') && settings.styleNormalState !== null) {
+                    // @see App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.Styles
+                    this.updateNormalLineStyles(settings.styleNormalState);
+                }
+
+                // Update the hover / active styles
+                if (settings.hasOwnProperty('styleHoverState') && settings.styleHoverState !== null) {
+                    // @see App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.Styles
+                    this.updateHoverLineStyles(settings.styleHoverState);
+                }
+            },
+
+            /***** QTI  *****/
+
+            /***** DRAWING *****/
+
+            drawQTIXMLLines: function() {
+                if (this.coordinateResponseData.lines.length > 0) {
+                    // @see App.Interactions.Graphs.D3.GeometricFigures.Behaviors.Line
+                    this.convertQTILineCoordinates(this.coordinateResponseData.lines);
+
+                    this.addLinesToCoordinateSystem();
+
+                    // Update toolbar state
+                    this.__toggleToolbarLineButtons();
+                }
+            },
+
+            reDrawLines: function() {
+                this.containerLines
+                    .selectAll('*')
+                    .remove();
+
+                this.addLinesToCoordinateSystem();
+
+                // Update toolbar state
+                this.__toggleToolbarLineButtons();
+            },
+
+            addLinesToCoordinateSystem: function() {
+                this.addLinesContainers();
+
+                // @see App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.ShadeToGrid
+                this.drawLinesPathsShades();
+
+                // App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.Endpoints
+                this.createLineEndPoints(this.coordinateResponseData.lines);
+
+                // Add onclick event listener
+                this.__attachCoordinateSystemLineOnclickListener();
+            },
+
+            addLinesContainers: function() {
+                // @see App.Interactions.Graphs.D3.GeometricFigures.Behaviors.D3Line
+                var drawingAttributes = this.__getLineDrawingAttributes();
+
+                this.drawLinesGrouped(
+                    this.containerLines,
+                    this.coordinateResponseData.lines,
+                    drawingAttributes
+                );
+
+                this.containerLines
+                    .selectAll('.container-line-group')
+                        .attr('class',
+                            'container-line-group ' + this.getDrawingLineClassNameContainer());
+            },
+
+            /**
+             * Attach drawing event with this event user is able to draw a line.
+             */
+            attachAddLineListener: function() {
+
+                var self = this;
+                this.svgContainer
+                    .on('mousedown', function() {
+                        // silence other listeners
+                        self.d3.event.stopPropagation();
+
+                        self.lineHandleMouseDown(this);
+                    })
+                    .on('mouseup', function() {
+                        // silence other listeners
+                        self.d3.event.stopPropagation();
+
+                        self.lineHandleMouseUp(this);
+                    });
+
+                this.svgContainer
+                    .on('touchstart', function() {
+                        // silence other listeners
+                        self.d3.event.stopPropagation();
+
+                        self.lineHandleMouseDown(this);
+                    })
+                    .on('touchend', function() {
+                        // silence other listeners
+                        self.d3.event.stopPropagation();
+
+                        self.lineHandleMouseUp(this);
+                    })
+            },
+
+            /**
+             * @param {Object} currentElement
+             *
+             * @see http://bl.ocks.org/hlucasfranca/f133da4493553963e710
+             * @see http://jsfiddle.net/9tr7w/360/
+             */
+            lineHandleMouseDown: function(currentElement) {
+                // Reset coordinates system active items
+                // App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.Styles
+                this.removeAllDrawingActiveItems();
+
+                if (this.__drawingLineIsEnable()) {
+                    this._onTapDefaultBehavior(currentElement);
+
+                    // The system receive a new line for drawing
+                    this.coordinateResponseData.lines.push(
+                        this.__generateLineDataAttributes());
+
+                    this.addLinesContainers();
+
+                    var self = this;
+                    this.svgContainer.on('mousemove', function() {
+                        // silence other listeners
+                        self.d3.event.stopPropagation();
+
+                        self.lineHandleMouseMove(this);
+                    });
+
+                    this.svgContainer.on('touchmove', function() {
+                        // silence other listeners
+                        self.d3.event.stopPropagation();
+
+                        self.lineHandleMouseMove(this);
+                    });
+
+                } else {
+                    // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.BaseInteraction
+                    this.setGroupGraphButtonsOnInactive();
+                }
+            },
+
+            /**
+             * @param {Object} currentElement
+             *
+             * @see http://bl.ocks.org/hlucasfranca/f133da4493553963e710
+             * @see http://jsfiddle.net/9tr7w/360/
+             */
+            lineHandleMouseUp: function(currentElement) {
+                // Mouse events
+                this.svgContainer.on('mousemove', null);
+                this.svgContainer.on('touchmove', null);
+
+                var lineIsRemoved = this.verifyLineHasEnoughDimensions();
+
+                if (this.__drawingLineIsEnable()) {
+                    // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.BaseInteraction
+                    this.loadGraphButtonDefaultStyle();
+                } else {
+                    // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.BaseInteraction
+                    this.setGroupGraphButtonsOnInactive();
+                }
+
+                if (lineIsRemoved) {
+                    return;
+                }
+
+                if (this.interactionSettings.snapToGridIsEnable) {
+                    // Get the active line index
+                    var index = this.getTheCurrentLineIndex();
+                    this.snapToGridLineByIndex(index);
+                }
+
+                // Update the heart beat
+                this.notifyPath('coordinateResponseData.lines',
+                    [].concat(this.coordinateResponseData.lines));
+
+                // App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.Endpoints
+                this.createLineEndPoints(this.coordinateResponseData.lines);
+
+                // Add onclick event listener
+                this.__attachCoordinateSystemLineOnclickListener();
+            },
+
+            /**
+             * If line x1 is equal to x2 and y1 is equal to y2 at this case
+             * the system should remove this line
+             */
+            verifyLineHasEnoughDimensions: function() {
+                var index = this.getTheCurrentLineIndex();
+                var backendLine = this.coordinateResponseData.lines[index];
+
+                var horizontalIsEqual =
+                    Math.ceil(backendLine['x1']) === Math.ceil(backendLine['x2']);
+
+                var verticalIsEqual =
+                    Math.ceil(backendLine['y1']) === Math.ceil(backendLine['y2']);
+
+                if (horizontalIsEqual && verticalIsEqual) {
+                    this.containerLines
+                        .selectAll('.' + this.getDrawingLineClassNameContainer())
+                        .filter(function(d, i) {
+                            return i === index;
+                        })
+                        .remove();
+
+                    this.coordinateResponseData.lines.pop();
+
+                    return true;
+                }
+
+                return false;
+            },
+
+            /**
+             * @param {Object} currentElement
+             *
+             * @see http://bl.ocks.org/hlucasfranca/f133da4493553963e710
+             * @see http://jsfiddle.net/9tr7w/360/
+             */
+            lineHandleMouseMove: function(currentElement) {
+                this._onTapDefaultBehavior(currentElement);
+
+                var index = this.getTheCurrentLineIndex();
+
+                this.coordinateResponseData.lines[index]['x2'] = this.coordinates.x;
+                this.coordinateResponseData.lines[index]['y2'] = this.coordinates.y;
+
+                this.updateLineD3Coordinates(
+                    this.coordinateResponseData.lines[index],
+                    index
+                );
+            },
+
+            /**
+             * Method is selecting the last active line and snap to grid line coordinates
+             *
+             * @param {Number} index Referencto to which line should be updated
+             */
+            snapToGridLineByIndex: function(index) {
+                // Get information about the line backend attributes
+                var line = this.coordinateResponseData.lines[index];
+
+                // @see App.Interactions.Graphs.D3.Behaviors.Corrections
+                var startingCoordinates = this._updateCoordinatesWithSnapToGridCorrection(
+                    {
+                        x: line.x1,
+                        y: line.y1
+                    },
+                    this.interactionSettings.snapToGridIsEnable
+                );
+
+                // Update the start point
+                this.coordinateResponseData.lines[index]['x1'] = startingCoordinates.x;
+                this.coordinateResponseData.lines[index]['y1'] = startingCoordinates.y;
+
+                // @see App.Interactions.Graphs.D3.Behaviors.Corrections
+                var endingCoordinates = this._updateCoordinatesWithSnapToGridCorrection(
+                    {
+                        x: line.x2,
+                        y: line.y2
+                    },
+                    this.interactionSettings.snapToGridIsEnable
+                );
+
+                // Update the end point
+                this.coordinateResponseData.lines[index]['x2'] = endingCoordinates.x;
+                this.coordinateResponseData.lines[index]['y2'] = endingCoordinates.y;
+
+                this.updateLineD3Coordinates(
+                    this.coordinateResponseData.lines[index],
+                    index
+                );
+            },
+
+            /**
+             * @param {Object} backendLine
+             * @param {Number} index
+             */
+            updateLineD3Coordinates: function(backendLine, index) {
+                this.containerLines
+                    .selectAll('.' + this.getDrawingLineClassNameContainer())
+                    .filter(function(d, i) {
+                        return i === index;
+                    })
+                    .selectAll('line')
+                        .attr('x1', backendLine.x1)
+                        .attr('y1', backendLine.y1)
+                        .attr('x2', backendLine.x2)
+                        .attr('y2', backendLine.y2);
+            },
+
+            getTheCurrentLineIndex: function() {
+                if (this.coordinateResponseData.lines.length > 0) {
+                    return (this.coordinateResponseData.lines.length - 1);
+                } else {
+                    return 0;
+                }
+            },
+
+            /**
+             * @return {Boolean} hasEmptySlot
+             */
+            __drawingLineIsEnable: function() {
+                return this.d3.collectionHasEmptySlots(
+                    this.coordinateResponseData.lines,
+                    this.settings.lines.maximumItems
+                );
+            },
+
+            /***** DRAWING *****/
+
+            /***** Toolbar Buttons *****/
+
+            /**
+             * Method is getting an information about which toolbar group should be updated.
+             */
+            getLineToolbarGroupKey: function() {
+                return 'line';
+            },
+
+            /**
+             * Method has an ability to disable or enable line toolbar buttons
+             * If the studen has an ability to draw a line -
+             * Toolbar buttons have status active otherwise inactive
+             */
+            __toggleToolbarLineButtons: function() {
+                var state;
+                if (this.__drawingLineIsEnable()) {
+                    state = 'default';
+                } else {
+                    state = 'inactive';
+                }
+
+                // App.Interactions.Graphs.CoordinateSystem.Behaviors.ToolBar
+                this.updateLinkedButtonsByGroupName(
+                    this.getLineToolbarGroupKey(),
+                    state
+                );
+            },
+
+            /***** Toolbar Buttons *****/
+
+            /***** Attributes *****/
+
+            /**
+             * Method is generating data collection attributes
+             */
+            __generateLineDataAttributes: function() {
+                var hasEndPoints = false;
+                if (this.interactionSettings.linesHaveEndPoints) {
+                    hasEndPoints = true;
+                }
+
+                var attributes = {
+                    x1: this.coordinates.x,
+                    y1: this.coordinates.y,
+                    x2: this.coordinates.x,
+                    y2: this.coordinates.y,
+                    'stroke-dasharray': this.lineDashFactor,
+                    hasEndPoints: hasEndPoints,
+                    paths: JSON.stringify([])
+                };
+
+                return attributes;
+            },
+
+            __getLineDrawingAttributes: function() {
+                var attributes = {
+                    'marker-start': function(d) {
+                        if (d.hasEndPoints) {
+                            return 'url(#line-normal-marker-start)';
+                        }
+
+                        return '';
+                    },
+
+                    'marker-end': function(d) {
+                        if (d.hasEndPoints) {
+                            return 'url(#line-normal-marker-end)';
+                        }
+
+                        return '';
+                    },
+
+                    'class': this.settings.lines.itemClassName
+                };
+
+                return attributes;
+            },
+
+            /***** Attributes *****/
+
+            /***** Listeners *****/
+
+            /* On click */
+            __attachCoordinateSystemLineOnclickListener: function() {
+                var self = this;
+                var line;
+                this.containerLines
+                    .selectAll('.' + this.getDrawingLineClassNameContainer())
+                        .selectAll('line')
+                            .on('click', function(d, i) {
+                                line = self.d3.select(this);
+
+                                if (self.interactionState !== self.getRemoveItemState()) {
+                                    // App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.Styles
+                                    self.toggleLineState(line);
+                                } else {
+                                    self.__removeLine(this);
+
+                                    // App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.Styles
+                                    self.drawingLineRollbackToolbarStyles();
+                                }
+                            });
+            },
+            /* On click */
+
+            /***** Listeners *****/
+
+            /***** Remove State ****/
+
+            /**
+             * @param {D3Object} item
+             */
+            __removeLine: function(item, index) {
+                var line = this.d3.select(item.parentNode);
+                line.remove();
+
+                // Update the backend collection
+                var index = this.coordinateResponseData.lines.indexOf(line.datum());
+                this.splice('coordinateResponseData.lines', index, 1);
+
+                // Turn on if this is necessary line graph buttons
+                this.__toggleToolbarLineButtons();
+
+                // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.BaseInteraction
+                this.loadGraphButtonDefaultStyle();
+            }
+            /***** Remove State ****/
+        }]
+    });
+</script>

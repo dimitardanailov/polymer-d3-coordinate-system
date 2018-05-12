@@ -1,0 +1,71 @@
+<link rel="import" href="../../../polymer/polymer.html">
+
+<dom-module id="graphing-tool-backend-item">
+
+    <script>
+        (function () {
+
+            Polymer({
+                is: 'graphing-tool-backend-item',
+
+                properties: {
+                    choiceId: {
+                        type: String,
+                        value: null
+                    },
+
+                    dataStringify: {
+
+                    },
+
+                    data: {
+                        type: Object,
+                        value: function() { return {}; },
+                        notify: true
+                    },
+
+                    value: {
+                        type: Object,
+                        value: function() { return {}; },
+                    }
+                },
+
+                observers: [
+                    '_hasNewData(data.dots.*)',
+                    '_hasNewData(data.lines.*)',
+
+                    '_hasNewData(data.segmentsDots.*)',
+                    '_hasNewData(data.segmentsLines.*)',
+
+                    '_hasNewData(data.raysDots.*)',
+                    '_hasNewData(data.raysLines.*)',
+                ],
+
+                /**
+                 */
+                _hasNewData: function() {
+                    this.debounce('__stringifyData', function() {
+                        this.__stringifyData();
+                    }, 1000);
+                },
+
+                /**
+                 * @param {Object} data
+                 */
+                __stringifyData: function() {
+                    // Heart beat
+                    this.value = {
+                        choiceId: this.choiceId,
+                        value: JSON.stringify(this.data)
+                    }
+
+                    console.log(this.value);
+                    console.log(this.data);
+
+                    //console.log('Backend data response lines: ', this.data.lines.length);
+                    //console.log('lines', JSON.stringify(this.data.lines));
+                }
+            });
+        }());
+    </script>
+</dom-module>

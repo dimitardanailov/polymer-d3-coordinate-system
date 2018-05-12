@@ -1,0 +1,655 @@
+<!--
+`App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.ShadeToGrid` is caring about
+the line shade to grid.
+-->
+
+<link rel="import" href="../../../../scripts/namespace.html">
+
+
+<link rel="import" href="../CoordinateSystemTapHoverBehaviour.html">
+<link rel="import" href="../interaction-states/CoordinateSystemInteractionBehaviour.html">
+<link rel="import" href="../styles/CoordinateSystemActiveItemStyleBehaviour.html">
+
+<!--
+Shared properties:
+1. containerLines
+-->
+<link rel="import" href="CoordinateSystemLineSharedPropertiesBehavior.html">
+<link rel="import" href="CoordinateSystemLineStylesBehaviour.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Line.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.ShadeToGrid = [
+            App.Interactions.Graphs.CoordinateSystem.Behaviors.CoordinateSystemTapHover,
+            // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.BaseInteraction,
+            App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.SharedProperties,
+            App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.Styles,
+            App.Interactions.Graphs.CoordinateSystem.Styles.Behaviors.ActiveItem, {
+
+            /*** Constants ***/
+            getSnapToGridClassName: function() {
+                return 'line-snap-grid';
+            },
+
+            getGroupShadeToGridLineClassName: function() {
+                return 'container-shade-to-grid';
+            },
+            /*** Constants ***/
+
+            /*** Add shade to grid ***/
+
+            /**
+             * Attach the line shade to grid listener
+             */
+            attachLineShadeToGridListener: function() {
+                var self = this;
+
+                this.svgContainer
+                    .on('click', function() {
+                        self.addShadeGridToLine(this);
+                    });
+            },
+
+            drawLinesPathsShades: function(backendData) {
+                var self = this;
+                this.containerLines
+                    .selectAll('.' + this.getDrawingLineClassNameContainer())
+                        .select('line')
+                            .each(function(d) {
+                                self.drawPathByLineInformation(
+                                    this,
+                                    JSON.parse(d.paths)
+                                );
+                            });
+            },
+
+            /**
+             * @param {D3Node} node
+             * @param {Array} pathCoordinates
+             */
+            drawPathByLineInformation: function(node, pathCoordinates) {
+                var lineGroup = this.d3.select(node.parentNode);
+                var lineFunction = this.generateLineSnapToGridFunction();
+
+                for (var i = 0; i < pathCoordinates.length; i++) {
+                    lineGroup
+                        .append('g')
+                            .attr('class', this.getGroupShadeToGridLineClassName())
+                        .append('path')
+                            .attr('d', lineFunction(pathCoordinates[i])+'Z')
+                            .attr('class', this.getSnapToGridClassName());
+                }
+            },
+
+            /**
+             * @param {D3Element} currentElement
+             */
+            addShadeGridToLine: function(currentElement) {
+                // Get information about the on tap coordinates
+                // App.Interactions.Graphs.CoordinateSystem.Behaviors.CoordinateSystemTapHover
+                this._onTapDefaultBehavior(currentElement);
+                var clickCoordinates = [this.coordinates.x, this.coordinates.y];
+
+                // Get the coordinates by active line
+                var attributes = this.getGetDrawingLineShadeToGridData();
+
+                if (attributes.g !== null) {
+                    // Generate the grid / path coordinates
+                    var pathCoordinates = this.generateLineDrawingPathCoordinates(
+                        attributes.coordinates,
+                        clickCoordinates
+                    );
+
+                    // Update line backend path coordinates
+                    this.updateLinePathDatum(attributes.g, pathCoordinates);
+
+                    this.drawLineSnapToGrid(attributes.g, pathCoordinates);
+
+                    // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.BaseInteraction
+                    this.loadGraphButtonDefaultStyle();
+
+                    // App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.Styles
+                    this.enableGraphButtonLineRemoveShadeToGrid();
+                }
+            },
+
+            /**
+             * Method find which is active line at this moment and
+             * get the line coordinates and which is group container
+             *
+             * @return {Object} keys are coordinates: (x1, y1, x2, y2) ang g
+             */
+            getGetDrawingLineShadeToGridData: function() {
+                var activeItemClassName = this.getActiveClassName();
+
+                var attributes = {
+                    coordinates: {
+                        x1: 0,
+                        y1: 0,
+                        x2: 0,
+                        y2: 0,
+                    },
+                    g: null
+                };
+
+                var line = this.containerLines
+                    .selectAll('.' + this.getDrawingLineClassNameContainer())
+                        .selectAll('.' + activeItemClassName);
+
+                if (!line.empty()) {
+                    var backendAttributes = line.datum();
+
+                    attributes.coordinates = {
+                        x1: backendAttributes.x1,
+                        y1: backendAttributes.y1,
+                        x2: backendAttributes.x2,
+                        y2: backendAttributes.y2,
+                    };
+
+                    // https://github.com/d3/d3-3.x-api-reference/blob/master/Selections.md
+                    // You can see the parent node of each group by inspecting
+                    // the parentNode property of each group array,
+                    // such as selection[0].parentNode.
+                    attributes.g = line[0].parentNode;
+                }
+
+                return attributes;
+            },
+
+            /**
+             *
+             * @param {Object} coordinates @see getGetDrawingLineShadeToGridData
+             */
+            generateLineDrawingPathCoordinates: function(coordinates, clickCoordinates) {
+                var pathCoordinates = this.__getIntersectionCoordinates(coordinates);
+
+                var polynomeOne = [];
+                var polynomeTwo = [];
+                var addOne =  true;
+                var addTwo =  false;
+                pathCoordinates.forEach(function(element,i){
+                    if (element.intersection){
+                        addOne = !addOne;
+                        addTwo = !addTwo;
+                        polynomeOne.push(element);
+                        polynomeTwo.push(element);
+                    } else {
+                        if(addOne){
+                            polynomeOne.push(element);
+                        }
+                        if(addTwo){
+                            polynomeTwo.push(element);
+                        }
+                    }
+                });
+
+                if(this.__pointInPolygon(clickCoordinates,polynomeOne)){
+                   return polynomeOne;
+                }
+                if(this.__pointInPolygon(clickCoordinates,polynomeTwo)){
+                   return polynomeTwo;
+                }
+            },
+
+            /**
+             * @param {D3Object} g `<g></g>` container
+             * @param {ObjectArray} pathCoordinates @see generateLineDrawingPathCoordinates
+             */
+            updateLinePathDatum: function(g, pathCoordinates) {
+                var shadeResponse = this.selectionLinePathDatum(g);
+                shadeResponse.paths.push(pathCoordinates);
+                this.updateLineDatumAttributes(
+                    shadeResponse.line,
+                    shadeResponse.paths
+                );
+            },
+
+            /**
+             *
+             * @param {D3Object} g
+             *
+             */
+            rollbackDefaultDatum: function(g){
+                var lineGroup = this.d3.select(g);
+                var line = lineGroup.select('line');
+                this.updateLineDatumAttributes(line, []);
+            },
+
+            /**
+             *
+             * @param {D3Object} g `<g></g>` container
+             * @param {ObjectArray} pathCoordinates @see generateLineDrawingPathCoordinates
+             */
+            replaceLinePathDatum: function(g, pathCoordinates) {
+                var shadeResponse = this.selectionLinePathDatum(g);
+                shadeResponse.paths = [];
+                shadeResponse.paths.push(pathCoordinates);
+
+                shadeResponse.line.attr('paths', function(d) {
+                     return d.paths = JSON.stringify(shadeResponse.paths);
+                 });
+            },
+
+            /**
+             *
+             * @param {D3Node} g
+             * @returns {Object}
+             */
+            selectionLinePathDatum:  function(g){
+                var response = {};
+                response.lineGroup = this.d3.select(g);
+                response.line = response.lineGroup.select('line');
+                response.datum = response.line.datum();
+                response.paths = JSON.parse(response.datum.paths);
+
+                return response;
+            },
+
+            /**
+             *
+             * @param {D3Object} line
+             * @param {Array} paths
+             *
+             */
+            updateLineDatumAttributes:  function(line,paths){
+               line.attr('paths', function(d) {
+                    return d.paths = JSON.stringify(paths);
+                });
+
+                // Update the hear beat
+                this.notifyPath('coordinateResponseData.lines',
+                    [].concat(this.coordinateResponseData.lines));
+            },
+
+
+            /**
+             * @param {D3Object} g `<g></g>` container
+             * @param {ObjectArray} pathCoordinates @see generateLineDrawingPathCoordinates
+             */
+            drawLineSnapToGrid: function(g, pathCoordinates) {
+                var lineFunction = this.generateLineSnapToGridFunction();
+
+                var activeItemClassName = this.getActiveClassName();
+
+                var line = this.containerLines
+                    .selectAll('.' + this.getDrawingLineClassNameContainer())
+                        .select('.' + activeItemClassName);
+                var lineGroup = d3.select(line.node().parentNode);
+
+                var pathGroup =  lineGroup
+                    .append('g')
+                        .attr('class', this.getGroupShadeToGridLineClassName());
+
+                // Append a path
+                pathGroup
+                    .append('path')
+                        .attr('d', lineFunction(pathCoordinates)+'Z')
+                        .attr('class', this.getSnapToGridClassName());
+
+                line.classed('', false);
+            },
+
+            generateLineSnapToGridFunction: function() {
+                var lineFunction = this.d3.svg.line()
+                    .x(function(d) { return d.x; })
+                    .y(function(d) { return d.y; })
+                    .interpolate('linear');
+
+                return lineFunction;
+            },
+
+            /*** Add shade to grid ***/
+
+            /*** Remove line shade to grid visualization  ***/
+
+            attachRemoveLineShadeToGridListener: function() {
+                var self = this;
+                this.containerLines
+                    .selectAll('.' + this.getDrawingLineClassNameContainer())
+                        .selectAll('.' + this.getSnapToGridClassName())
+                            .on('click', function(d, i) {
+                                self.removeLineShadeToGrid(this);
+                            });
+            },
+
+            detachRemoveLineShadeToGridListener: function() {
+                this.containerLines
+                    .selectAll('.' + this.getDrawingLineClassNameContainer())
+                        .selectAll('.' + this.getSnapToGridClassName())
+                            .on('click', null);
+            },
+
+            /**
+             * @param {D3Element} currentElement
+             */
+            removeLineShadeToGrid: function(currentElement) {
+                // detach all click listeners
+                this.detachRemoveLineShadeToGridListener();
+
+                this.rollbackDefaultDatum(currentElement.parentNode);
+                this.d3.select(currentElement).remove();
+
+                // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.BaseInteraction
+                this.loadGraphButtonDefaultStyle();
+
+                // Reset coordinates system active items
+                // App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.Styles
+                this.removeAllDrawingActiveItems();
+            },
+
+            /*** Remove line shade to grid visualization, later will be resize  ***/
+            resizeLineShading: function(g, updateDatabase){
+                var paths = this.d3.select(g)
+                    .selectAll('.' + this.getGroupShadeToGridLineClassName())
+                        .selectAll('path');
+
+                if (!paths.empty()){
+                    var boundaryBox = paths.node().getBBox();
+                    var centerPoint = [
+                        boundaryBox.x + (boundaryBox.width / 2),
+                        boundaryBox.y + (boundaryBox.height / 2)
+                    ];
+
+                    var line = this.d3.select(g).select('line');
+                    if (!line.empty()) {
+                        var backendAttributes = line.datum();
+                        var lineDatumCoordinates = {
+                            x1: backendAttributes.x1,
+                            y1: backendAttributes.y1,
+                            x2: backendAttributes.x2,
+                            y2: backendAttributes.y2,
+                        };
+                    }
+
+                    // Generate the grid / path coordinates
+                    var newCoordinates = this.generateLineDrawingPathCoordinates(
+                        lineDatumCoordinates,
+                        centerPoint
+                    );
+
+                    if(updateDatabase){
+                        this.replaceLinePathDatum(g, newCoordinates);
+                    }
+
+                    var lineFunction = this.generateLineSnapToGridFunction();
+
+                    paths
+                        .transition()
+                        .duration(0)
+                        .ease('linear')
+                        .attr('d', lineFunction(newCoordinates) + 'Z');
+                }
+            },
+
+            /**
+             * @param {Object} coordinates @see getGetDrawingLineShadeToGridData
+             */
+            __getIntersectionCoordinates: function(coordinates) {
+                var virtualLine = this.__getVirtualLineCoordinates(coordinates);
+
+                var pathCoordinates = [];
+
+                // Top intersection coordinates
+                pathCoordinates =
+                    this.__addTopIntersectionCoordinates(virtualLine, pathCoordinates);
+
+                // Right intersection coordinates
+                pathCoordinates =
+                    this.__addRightIntersectionCoordinates(virtualLine, pathCoordinates);
+
+                // Bottom intersection coordinates
+                pathCoordinates =
+                    this.__addBottomIntersectionCoordinates(virtualLine, pathCoordinates);
+
+                // Left insersection coordinates
+                pathCoordinates =
+                    this.__addLeftIntersectionCoordinates(virtualLine, pathCoordinates);
+
+                return pathCoordinates;
+            },
+
+            /**
+             * Method get coordinates of virtual line that continue the ray to
+             * intersect the coordinate system
+             *
+             * @param {object} coordinates
+             * @returns {array}
+             */
+            __getVirtualLineCoordinates: function(coordinates){
+                var self = this;
+                var x1 = ((coordinates.x2-coordinates.x1)*(this.dimensions.height - coordinates.y1)/(coordinates.y2 - coordinates.y1))+coordinates.x1;
+                var y1 = ((coordinates.x2-coordinates.x1)*(this.dimensions.height - coordinates.y1)/(coordinates.x2 - coordinates.x1))+coordinates.y1;
+                var x2 = ((coordinates.x2-coordinates.x1)*(0 - coordinates.y1)/(coordinates.y2 - coordinates.y1))+coordinates.x1;
+                var y2 = ((coordinates.x2-coordinates.x1)*(0 - coordinates.y1)/(coordinates.x2 - coordinates.x1))+coordinates.y1;
+
+                //Vertical line
+                if(coordinates.x1 == coordinates.x2){
+                    x1 = coordinates.x1;
+                    x2 = coordinates.x1;
+                    y1 = 0;
+                    y2 = this.dimensions.height;
+                }
+
+                //Horizontal line
+                if(coordinates.y1 == coordinates.y2){
+                    y1 = coordinates.y1;
+                    y2 = coordinates.y1;
+                    x1 = 0;
+                    x2 = this.dimensions.width;
+                };
+
+                var data = {
+                    x1: x1,
+                    y1: y1,
+                    x2: x2,
+                    y2: y2
+                };
+
+                return data;
+            },
+
+            /**
+             * @param {Object} virtualLine keys are x1, y1, x2 and y2
+             * @param {Array} data - Line coordinates
+             */
+            __addTopIntersectionCoordinates: function(virtualLine, coordinates) {
+                var intersection = this.__checkLineIntersection(
+                    virtualLine,
+                    {
+                        x1: 0,
+                        y1: 0,
+                        x2: this.dimensions.width,
+                        y2: 0
+                    }
+                );
+
+                coordinates.push({
+                    x: 0,
+                    y: 0,
+                    intersection: false
+                });
+
+                if (intersection.onLine2) {
+                    coordinates.push({
+                        x: intersection.x,
+                        y: intersection.y,
+                        intersection: true
+                    });
+                }
+
+                return coordinates;
+            },
+
+            /**
+             * @param {Object} virtualLine keys are x1, y1, x2 and y2
+             * @param {Array} data - Line coordinates
+             */
+            __addRightIntersectionCoordinates: function(virtualLine, coordinates) {
+                var intersection = this.__checkLineIntersection(
+                    virtualLine,
+                    {
+                        x1: this.dimensions.width,
+                        y1: 0,
+                        x2: this.dimensions.width,
+                        y2: this.dimensions.height
+                    }
+                );
+
+                coordinates.push({
+                    x: this.dimensions.width,
+                    y: 0,
+                    intersection: false
+                });
+
+                if (intersection.onLine2) {
+                    coordinates.push({
+                        x: intersection.x,
+                        y: intersection.y,
+                        intersection: true
+                    });
+                }
+
+                return coordinates;
+            },
+
+            /**
+             * @param {Object} virtualLine keys are x1, y1, x2 and y2
+             * @param {Array} data - Line coordinates
+             */
+            __addBottomIntersectionCoordinates: function(virtualLine, coordinates) {
+                var intersection = this.__checkLineIntersection(
+                    virtualLine,
+                    {
+                        x1: this.dimensions.width,
+                        y1: this.dimensions.height,
+                        x2: 0,
+                        y2: this.dimensions.width
+                    }
+                );
+
+                coordinates.push({
+                    x: this.dimensions.width,
+                    y: this.dimensions.height,
+                    intersection: false
+                });
+
+                if(intersection.onLine2 == true){
+                    coordinates.push({
+                        x: intersection.x,
+                        y: intersection.y,
+                        intersection: true
+                    });
+                }
+
+                return coordinates;
+            },
+
+            /**
+             * @param {Object} virtualLine keys are x1, y1, x2 and y2
+             * @param {Array} data - Line coordinates
+             */
+            __addLeftIntersectionCoordinates: function(virtualLine, coordinates) {
+                var intersection = this.__checkLineIntersection(
+                    virtualLine,
+                    {
+                        x1: 0,
+                        y1: this.dimensions.height,
+                        x2: 0,
+                        y2: 0
+                    });
+
+                coordinates.push({
+                    x: 0,
+                    y: this.dimensions.height,
+                    intersection: false
+                });
+
+                if(intersection.onLine2 == true){
+                    coordinates.push({
+                        x: intersection.x,
+                        y: intersection.y,
+                        intersection: true
+                    });
+                }
+
+                return coordinates;
+            },
+
+            /**
+             * Method calculate intersection points
+             * See http://jsfiddle.net/justin_c_rounds/Gd2S2/light/
+             * @param {type} line1Coordinates
+             * @param {type} line2Coordinates
+             * @returns {CoordinateSystemLineShadeGridBehaviour_L2.CoordinateSystemLineShadeGridBehaviourAnonym$0.__checkLineIntersection.result}
+             */
+            __checkLineIntersection: function(line1Coordinates,line2Coordinates) {
+                // if the lines intersect, the result contains the x and y of the intersection (treating the lines as infinite) and booleans for whether line segment 1 or line segment 2 contain the point
+                var denominator, a, b, numerator1, numerator2, result = {
+                    x: null,
+                    y: null,
+                    onLine1: false,
+                    onLine2: false
+                };
+                denominator = ((line2Coordinates.y2 - line2Coordinates.y1) * (line1Coordinates.x2 - line1Coordinates.x1)) - ((line2Coordinates.x2 - line2Coordinates.x1) * (line1Coordinates.y2 - line1Coordinates.y1));
+                if (denominator == 0) {
+                    return result;
+                }
+                a = line1Coordinates.y1 - line2Coordinates.y1;
+                b = line1Coordinates.x1 - line2Coordinates.x1;
+                numerator1 = ((line2Coordinates.x2 - line2Coordinates.x1) * a) - ((line2Coordinates.y2 - line2Coordinates.y1) * b);
+                numerator2 = ((line1Coordinates.x2 - line1Coordinates.x1) * a) - ((line1Coordinates.y2 - line1Coordinates.y1) * b);
+                a = numerator1 / denominator;
+                b = numerator2 / denominator;
+
+                // if we cast these lines infinitely in both directions, they intersect here:
+                result.x = line1Coordinates.x1 + (a * (line1Coordinates.x2 - line1Coordinates.x1));
+                result.y = line1Coordinates.y1 + (a * (line1Coordinates.y2 - line1Coordinates.y1));
+                /*
+                    // it is worth noting that this should be the same as:
+                    x = line2Coordinates.x1 + (b * (line2Coordinates.x2 - line2Coordinates.x1));
+                    y = line2Coordinates.x1 + (b * (line2Coordinates.y2 - line2Coordinates.y1));
+                    */
+                // if line1 is a segment and line2 is infinite, they intersect if:
+                if (a > 0 && a <= 1) {
+                    result.onLine1 = true;
+                }
+                // if line2 is a segment and line1 is infinite, they intersect if:
+                if (b > 0 && b <= 1) {
+                    result.onLine2 = true;
+                }
+                // if line1 and line2 are segments, they intersect if both of the above are true
+                return result;
+            },
+
+            /**
+             * Method dhat check if point is in polygon
+             *
+             * @see https://github.com/substack/point-in-polygon
+             * @see https://github.com/substack/point-in-polygon
+             *
+             * @param {type} point
+             * @param {type} vs
+             * @returns {Boolean}
+             */
+            __pointInPolygon: function (point, vs) {
+                var xi, xj, i, intersect,yi,yj,
+                    x = point[0],
+                    y = point[1],
+                    inside = false;
+                for (var i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+                  xi = vs[i]['x'],
+                  yi = vs[i]['y'],
+                  xj = vs[j]['x'],
+                  yj = vs[j]['y'],
+                  intersect = ((yi > y) != (yj > y))
+                      && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+                  if (intersect) inside = !inside;
+                }
+
+                return inside;
+            },
+        }];
+    });
+</script>

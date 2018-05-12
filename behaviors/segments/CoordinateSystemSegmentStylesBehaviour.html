@@ -1,0 +1,267 @@
+<link rel="import" href="../../../../scripts/namespace.html">
+
+<link rel="import" href="../../../../behaviors/collections/ObjectBehavior.html">
+
+<link rel="import" href="../styles/CoordinateSystemActiveItemStyleBehaviour.html">
+
+<!--
+Shared properties
+1. this.containerDotsWithLineConnection
+-->
+<link rel="import" href="CoordinateSystemSegmentSharedPropertiesBehavior.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Segment.Behaviors', function(namespace) {
+
+        namespace.Styles = [
+            App.Collections.Behaviors.Object,
+
+            App.Interactions.Graphs.CoordinateSystem.Styles.Behaviors.ActiveItem,
+
+            App.Interactions.Graphs.CoordinateSystem.Segment.Behaviors.SharedProperties, {
+
+            /**** QTI ****/
+
+            /**
+             * @param {Object} styles
+             */
+            updateSegmentStyles: function(styles) {
+                if (styles.hasOwnProperty('points')) {
+                    this.updateSegmentPointStyles(styles.points);
+                }
+
+
+                if (styles.hasOwnProperty('lines')) {
+                    this.updateSegmentLineStyles(styles.lines);
+                }
+
+                // Override the default styles
+                this.updateStyles();
+            },
+
+            /** Point QTI XML - styles ****/
+
+            /**
+             * @param {Object} pointStyles
+             */
+            updateSegmentPointStyles: function(pointStyles) {
+                // Normal Styles
+                this.updateSegmentPointNormalStyles(pointStyles.styleNormalState);
+
+                // Active / Hover Styles
+                this.updateSegmentPointHoverStyles(pointStyles.styleHoverState);
+            },
+
+            /**
+             * @param {Object} styles
+             */
+            updateSegmentPointNormalStyles: function(styles) {
+                // circle: fill
+                if (styles.fill !== null) {
+                    this.customStyle['--coordinate-system-segments-circle-fill'] =
+                        styles.fill;
+                }
+
+                // circle: stroke
+                if (styles.stroke !== null) {
+                    this.customStyle['--coordinate-system-segments-circle-stroke'] =
+                        styles.stroke;
+                }
+
+                // circle: stroke width
+                if (styles.strokeWidth !== null) {
+                    this.customStyle['--coordinate-system-segments-circle-stroke-width'] = styles.strokeWidth;
+                }
+            },
+
+            /**
+             * Method is updating the point hover and active styles
+             *
+             * @param {Object} styles
+             */
+            updateSegmentPointHoverStyles: function(styles) {
+                // circle: fill
+                if (styles.fill !== null) {
+                    this.customStyle['--coordinate-system-active-segments-circle-fill'] =
+                        styles.fill;
+                }
+
+                // circle: stroke
+                if (styles.stroke !== null) {
+                    this.customStyle['--coordinate-system-active-segments-circle-stroke'] =
+                        styles.stroke;
+                }
+
+                // circle: stroke width
+                if (styles.strokeWidth !== null) {
+                    this.customStyle['--coordinate-system-active-segments-circle-stroke-width'] =
+                        styles.strokeWidth;
+                }
+            },
+
+            /** Line QTI XML - styles ****/
+
+            /**
+             * @param {Object} lineStyles
+             */
+            updateSegmentLineStyles: function(lineStyles) {
+                // Normal Styles
+                this.updateSegmentLineNormalStyles(lineStyles.styleNormalState);
+
+                // Active / Hover Styles
+                this.updateSegmentLineHoverStyles(lineStyles.styleHoverState);
+            },
+
+            /**
+             * @param {Object} styles
+             */
+            updateSegmentLineNormalStyles: function(styles) {
+                if (styles.stroke !== null) {
+                    this.customStyle['--coordinate-system-segments-line-stroke'] =
+                        styles.stroke;
+                }
+
+                if (styles.strokeLineWidth !== null) {
+                    this.customStyle['--coordinate-system-segments-line-stroke-width'] =
+                        styles.strokeLineWidth;
+                }
+            },
+
+            /**
+             * Method is updating the point hover and active styles
+             *
+             * @param {Object} styles
+             */
+            updateSegmentLineHoverStyles: function(styles) {
+                if (styles.stroke !== null) {
+                    this.customStyle['--coordinate-system-active-segments-line-stroke'] =
+                        styles.stroke;
+                }
+
+                if (styles.strokeLineWidth !== null) {
+                    this.customStyle['--coordinate-system-active-segments-line-stroke-width'] =
+                        styles.strokeLineWidth;
+                }
+            },
+            /**** QTI ****/
+
+            /**
+             * @param {D3Object} index
+             */
+            toggleSegmentState: function(group) {
+                var line = group.selectAll('line');
+                var circles = group.selectAll('circle');
+
+                if (!line.empty() && !circles.empty()) {
+                    // Circles
+                    var self = this;
+                    circles.each(function() {
+                        // App.Interactions.Graphs.CoordinateSystem.Styles.Behaviors.ActiveItem
+                        self.toggleItemState(self.d3.select(this));
+                    });
+
+                    // App.Interactions.Graphs.CoordinateSystem.Styles.Behaviors.ActiveItem
+                    var lineIsActive = this.toggleItemState(line);
+
+                    if (lineIsActive) {
+                        // line.attr('filter', 'url(#dropshadow)');
+                        // circles.attr('filter', 'url(#dropshadow)');
+
+                        this.deactiveSegmentSubItems(group);
+                    } else {
+                        line.attr('filter', null);
+                        circles.attr('filter', null);
+                    }
+                }
+            },
+
+            /**
+             * @param {D3Object} group
+             */
+            deactiveSegmentSubItems: function(group) {
+                var data = group.datum();
+
+                var self = this;
+                var groupItems = this.containerDotsWithLineConnection
+                    .selectAll('g')
+                    .filter(function(d) {
+                        return (!self.objectsAreEqual(d, data));
+                    });
+
+                this.rollbackSegmentsNormalStyles(groupItems);
+            },
+
+            /**
+             * Method is iterating the all group items and revet d3 objects
+             * to normal states (remove the active class name)
+             *
+             * @param {D3ArrayObject} groupItems
+             */
+            rollbackSegmentsNormalStyles: function(groupItems) {
+                // App.Interactions.Graphs.CoordinateSystem.Styles.Behaviors.ActiveItem
+                var activeItemClassName = this.getActiveClassName();
+
+                var self = this;
+                groupItems
+                    .selectAll('line')
+                        .attr('filter', null)
+                        .attr('class', function() {
+                            // App.Interactions.Graphs.D3.Behaviors.Styles
+                            return self.removeD3CssClass(this, activeItemClassName);
+                        });
+
+                groupItems
+                    .selectAll('circle')
+                        .attr('filter', null)
+                        .attr('class', function() {
+                            // App.Interactions.Graphs.D3.Behaviors.Styles
+                            return self.removeD3CssClass(this, activeItemClassName);
+                        });
+            },
+
+            /**** Transformation ****/
+            /**
+             * @param {Boolean} pointsAreOpen
+             * @param {Number} lineDashFactor
+             */
+            transformActiveSegments: function(pointsAreOpen, lineDashFactor) {
+                // Points
+                this.transformActiveSegmentPoints(pointsAreOpen);
+
+                // Line
+                this.transformActiveSegmentLines(lineDashFactor)
+            },
+
+            /**
+             * @param {Boolean} pointsAreOpen
+             */
+            transformActiveSegmentPoints: function(pointsAreOpen) {
+                var items = this.containerDotsWithLineConnection
+                    .selectAll('circle');
+
+                // App.Interactions.Graphs.D3.GeometricFigures.Behaviors.Circle
+                this.changeActiveCircleData(
+                    pointsAreOpen,
+                    items,
+                    this.coordinateResponseData.segmentsDots
+                );
+            },
+
+            /**
+             * @param {Number} lineDashFactor
+             */
+            transformActiveSegmentLines: function(lineDashFactor) {
+                var items = this.containerDotsWithLineConnection
+                    .selectAll('line');
+
+                // App.Interactions.Graphs.D3.GeometricFigures.Behaviors.Line
+                this.changeActiveLineData(
+                    lineDashFactor,
+                    items,
+                    this.coordinateResponseData.segmentsDots
+                );
+            }
+            /**** Transformation ****/
+        }];
+    });
+</script>

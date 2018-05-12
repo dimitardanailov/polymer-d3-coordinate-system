@@ -1,0 +1,177 @@
+<!--
+`App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.Drag` is caring about
+the drag and drop drawing line type.
+-->
+
+<link rel="import" href="../../../../scripts/namespace.html">
+
+<link rel="import" href="../CoordinateSystemSnapToGridBehaviour.html">
+
+<!--
+Shared properties:
+1. containerLines
+-->
+<link rel="import" href="CoordinateSystemLineSharedPropertiesBehavior.html">
+<link rel="import" href="CoordinateSystemLineShadeGridBehaviour.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Line.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.Drag = [
+            App.Interactions.Graphs.CoordinateSystem.Behaviors.SnapToGrid,
+
+            App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.SharedProperties,
+            App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.ShadeToGrid, {
+
+            /**
+             * Method is selecting only lines with drawing type - line
+             * and enable draggable behavior
+             */
+            attachDraggableBehavior: function() {
+                var drag = this.__getLineDragBehavior();
+
+                this.containerLines
+                    .selectAll('.' + this.getDrawingLineClassNameContainer())
+                        .selectAll('line')
+                        .call(drag);
+            },
+
+            /**
+             * Method is selecting only lines with drawing type - line
+             * and disable
+             */
+            detachLineDraggableBehavior: function() {
+                this.containerLines
+                    .selectAll('.' + this.getDrawingLineClassNameContainer())
+                    .selectAll('line')
+                        .on('mousedown.drag', null);
+            },
+
+            /**
+             * @see https://bl.ocks.org/mbostock/6123708
+             * @see http://bl.ocks.org/sgruhier/1d692762f8328a2c9957
+             * @see https://github.com/d3/d3/blob/master/API.md#dragging-d3-drag
+             * @see http://bl.ocks.org/mbostock/1557377
+             * @see https://jsfiddle.net/3k2u8buk/
+             *
+             * @return {D3Function} drag
+             */
+            __getLineDragBehavior: function() {
+                var self = this;
+
+                var drag = this.d3.behavior.drag()
+                    .origin(function(event) { return event; })
+                    .on('dragstart', function() {
+                        self.__lineDragstarted(this);
+                    })
+                    .on('drag', function(d) {
+                        self.__lineDragged(d, this);
+                    })
+                    .on('dragend', function(d) {
+                        self.__lineDragended(d, this);
+                    });
+
+                return drag;
+            },
+
+            /**
+             * @see https://bl.ocks.org/mbostock/6123708
+             * @see https://jsfiddle.net/3k2u8buk/
+             *
+             * @param {D3Object} currentElement
+             */
+            __lineDragstarted: function(currentElement) {
+                // silence other listeners
+                this.d3.event.sourceEvent.stopPropagation();
+            },
+
+            /**
+             * @see https://bl.ocks.org/mbostock/6123708
+             * @see https://jsfiddle.net/3k2u8buk/
+             *
+             * @param {D3EventListenerIntance} event
+             * @param {D3Instance} currentElement
+             */
+            __lineDragged: function(d, currentElement) {
+                var x = (this.d3.event.dx / this.externalZoom);
+                var y = (this.d3.event.dy / this.externalZoom);
+                var attributes = {
+                    x1: d.x1 + x,
+                    y1: d.y1 + y,
+
+                    x2: d.x2 + x,
+                    y2: d.y2 + y,
+                };
+
+                d.x1 = attributes.x1;
+                d.y1 = attributes.y1;
+                d.x2 = attributes.x2;
+                d.y2 = attributes.y2;
+
+                var line = this.d3.select(currentElement);
+                line.attr(attributes);
+
+                //App.Interactions.Graphs.CoordinateSystem.Behaviors.ShadeToGrid
+                this.resizeLineShading(currentElement.parentNode, false);
+
+                // Update the endpoints coordinates
+                this.__lineSetEndPointsNewLocation(currentElement);
+            },
+
+            /**
+             * @see https://bl.ocks.org/mbostock/6123708
+             *
+             * @param {D3EventListenerIntance} event
+             * @param {D3Instance} currentElement
+             */
+            __lineDragended: function(d, currentElement) {
+                // silence other listeners
+                this.d3.event.sourceEvent.stopPropagation();
+
+                var line = this.d3.select(currentElement);
+
+                if (this.interactionSettings.snapToGridIsEnable) {
+                    // App.Interactions.Graphs.CoordinateSystem.Behaviors.SnapToGrid
+                    this.snapToGridRayLine(line);
+                }
+
+                // App.Interactions.Graphs.CoordinateSystem.Behaviors.ShadeToGrid
+                this.resizeLineShading(currentElement.parentNode, true);
+
+                // Update the endpoints coordinates
+                this.__lineSetEndPointsNewLocation(currentElement);
+
+                // Update the heart beat
+                this.notifyPath('coordinateResponseData.lines',
+                    this.coordinateResponseData.lines.map(function(d) { return d }));
+            },
+
+            /**
+             * Method is update the endpoints(circles coordinates)
+             *
+             * @see https://bl.ocks.org/dimitardanailov/bb12fef05c5ed56e793728ed8e84bb81
+             *
+             * @param {D3Instance} currentElement
+             */
+            __lineSetEndPointsNewLocation: function(currentElement) {
+                var coordinates = this.d3.select(currentElement).datum();
+                var group = this.d3.select(currentElement.parentNode);
+
+                var self = this;
+                group.selectAll('circle')
+                    .each(function(d) {
+                        if (d.marker === 'marker-start') {
+                            self.d3.select(this)
+                                .attr('cx', d.x = coordinates.x1)
+                                .attr('cy', d.y = coordinates.y1);
+                        } else {
+                            self.d3.select(this)
+                                .attr('cx', d.x = coordinates.x2)
+                                .attr('cy', d.y = coordinates.y2);
+                        }
+                    });
+            }
+        }];
+    });
+</script>

@@ -1,0 +1,585 @@
+<link rel="import" href="../../../polymer/polymer.html">
+
+<!-- Behaviours -->
+<link rel="import" href="behaviors/CoordinateSystemSharedPropertiesBehaviour.html">
+
+<!-- Collections -->
+<link rel="import" href="../../behaviors/collections/ObjectBehavior.html">
+<!-- Collections -->
+
+<!-- Base -->
+<link rel="import" href="../behaviors/graphing-interactions/D3Behaviour.html">
+<link rel="import" href="../behaviors/graphing-interactions/D3CorrectionsBehaviour.html">
+<link rel="import" href="../behaviors/graphing-interactions/D3MarginBehaviour.html">
+<link rel="import" href="../behaviors/graphing-interactions/D3ScaleLinearBehaviour.html">
+<link rel="import" href="../behaviors/graphing-interactions/D3StylesBehaviour.html">
+<!-- Base -->
+
+<!-- GeometricFigures -->
+<link rel="import" href="../behaviors/graphing-interactions/GeometricFigures/D3Circle.html">
+<link rel="import" href="../behaviors/graphing-interactions/GeometricFigures/D3Line.html">
+
+<!-- Markers -->
+<link rel="import" href="../behaviors/graphing-interactions/GeometricFigures/markers/D3Marker.html">
+<link rel="import" href="../behaviors/graphing-interactions/GeometricFigures/markers/arrows/D3MarkerClosedArrows.html">
+
+<link rel="import" href="../behaviors/graphing-interactions/GeometricFigures/markers/arrows/D3MarkerOpenArrows.html">
+
+<!-- GeometricFigures -->
+
+<!-- Coordinate System -->
+<link rel="import" href="behaviors/CoordinateSystemBehaviour.html">
+<link rel="import" href="behaviors/CoordinateSystemQuadrantsBehaviour.html">
+<link rel="import" href="behaviors/CoordinateSystemRemoveItemBehaviour.html">
+<link rel="import" href="behaviors/CoordinateSystemZoomBehaviour.html">
+
+<!-- Interactions -->
+<link rel="import" href="behaviors/interaction-states/CoordinateSystemInteractionBehaviour.html">
+<!-- Interactions -->
+
+<!-- Tap and Hover -->
+<link rel="import" href="behaviors/CoordinateSystemTapHoverBehaviour.html">
+
+<!-- QTI -->
+<link rel="import" href="behaviors/qti/CoordinateSystemQtiGridSettings.html">
+
+<!-- Markers -->
+<link rel="import" href="behaviors/markers/CoordinateSystemMarkerBehaviour.html">
+<!-- Markers -->
+
+<!-- Circle -->
+<link rel="import" href="behaviors/circles/CoordinateSystemCircleBehaviour.html">
+<link rel="import" href="behaviors/circles/CoordinateSystemCircleMouseOverBehaviour.html">
+<link rel="import" href="behaviors/circles/CoordinateSystemCircleStylesBehaviour.html">
+<!-- Circle -->
+<!-- Tap and Hover -->
+
+<!-- Text items -->
+<link rel="import" href="behaviors/textItems/CoordinateSystemTitleBehaviour.html">
+<link rel="import" href="behaviors/textItems/CoordinateSystemLabelBehaviour.html">
+<!-- Text items -->
+
+<!-- Styles -->
+<link rel="import" href="behaviors/styles/CoordinateSystemActiveItemStyleBehaviour.html">
+<link rel="import" href="behaviors/styles/CoordinateSystemBaseStyleBehaviour.html">
+<link rel="import" href="behaviors/styles/CoordinateSystemCircleStyleBehaviour.html">
+<link rel="import" href="behaviors/styles/CoordinateSystemLineStyleBehaviour.html">
+<!-- Styles -->
+
+<!-- Coordinate System -->
+
+<link rel="import" href="behaviors/CoordinateSystemToolbarBehaviour.html">
+<!-- Behaviours -->
+
+<!-- Styles -->
+<link rel="import" href="../../styles/shared-styles.html">
+<link rel="import" href="styles/coordinate-sytem-styles.html">
+<!-- Styles -->
+
+<!-- Sub Components -->
+<link rel="import" href="../../elements/graphing-tool-interaction/graphing-tool-backend-item.html">
+<link rel="import" href="../../elements/graphing-tool-interaction/graphing-tool-history-manager.html">
+<link rel="import" href="../../elements/graphing-tool-interaction/graphing-tool-buttons-settings.html">
+<link rel="import" href="../../elements/graphing-tool-interaction/graph-button.html">
+
+<!--
+Component only for development purposes
+<link rel="import" href="../../elements/graphing-tool-interaction/graphing-tool-history-manager-faker.html">
+-->
+<!-- Sub components -->
+
+<!-- D3 Plugins -->
+<link rel="import" href="plugins/d3-collections/d3-map-points-collection.html">
+<link rel="import" href="plugins/d3-geometric-figures/group/d3-geometric-figure-group.html">
+<link rel="import" href="plugins/d3-svg-shadow/d3-svg-shadow.html">
+<!-- D3 Plugins -->
+
+<dom-module id="graphing-tool-interaction">
+    <template strip-whitespace>
+        <style include="shared-styles"></style>
+        <style include="d3-coordinate-system"></style>
+
+        <style>
+            :host {
+                position: relative;
+
+                display: block;
+
+                margin-top: 10px;
+            }
+
+            :host > #graphingInteractionWrapper {
+                position: relative;
+
+                display: -webkit-flex; /* Safari */
+                display: flex;
+
+                -webkit-flex-direction: row; /* Safari 6.1+ */
+                    -ms-flex-direction: row;
+                        flex-direction: row;
+
+                -webkit-flex-wrap: nowrap; /* Safari 6.1+ */
+                        flex-wrap: nowrap;
+            }
+
+            :host .graphing-toolbar {
+                position: relative;
+
+                display: inline-block;
+                margin-left: 40px;
+                min-width: 32px;
+                min-height: 32px;
+            }
+
+            :host .graphing-toolbar-list {
+                position: relative;
+
+                display: block;
+                width: 89px;
+                padding: 5px 10px;
+                margin: 0;
+
+                background-color: var(--graphing-toolbar-background-color, #334049);
+                color: var(--graphing-toolbar-color, #fff);
+            }
+
+            :host .toolbar-history-delimiter-container {
+                position: relative;
+
+                display: block;
+                height: 1px;
+                margin: 0 auto;
+                width: 100%;
+
+                background-color: var(--graphing-toolbar-background-color, #334049);
+            }
+
+            :host .toolbar-history-delimiter-visual {
+                position: relative;
+
+                display: block;
+                margin: 0 auto;
+                width: 80%;
+
+                border: 1px solid var(--toolbar-history-delimiter-border-color, #a2d8fd);
+            }
+
+            :host #coordinateSystem {
+                border: 1px solid var(--graphing-coordinate-system-border-color, #c8c8c8);
+
+                background-color: var(--graphing-coordinate-system-background-color, #fff);
+            }
+
+            :host .toolbar-standart-gap {
+                margin-top: 15px;
+            }
+
+            :host .toolbar-list-item {
+                position: relative;
+
+                display: inline-block;
+            }
+
+            :host .toolbar-inline-list > li {
+                display: inline-block;
+            }
+
+            :host .toolbar-right-item {
+                margin-left: 5px;
+            }
+        </style>
+
+        <section>
+            <graphing-tool-backend-item data="[[coordinateResponseData]]" id="[[id]]"></graphing-tool-backend-item>
+            <graphing-tool-buttons-settings allowed-buttons="[[allowedButtons]]" buttons="{{_buttons}}"></graphing-tool-buttons-settings>
+
+            <content></content>
+
+            <!--
+            <section>
+                <div>
+                    <label for="snapToGridIsEnable">Snap to grid</label>
+                    <input type="checkbox"
+                           checked="{{interactionSettings.snapToGridIsEnable::change}}"
+                           id="snapToGridIsEnable" />
+                </div>
+            </section>
+            -->
+
+            <!--
+            Disabled for Phase I
+            <section>
+                <button id="zoomIn" class="coordinate-system-zoom-controlls">+</button>
+                <button id="zoomOut" class="coordinate-system-zoom-controlls">-</button>
+            </section>
+            -->
+        </section>
+
+        <section id="graphingInteractionWrapper">
+            <!-- Left part -->
+            <section>
+                <svg id="coordinateSystem"></svg>
+            </section>
+            <!-- Left part -->
+
+            <!-- Right Part -->
+            <nav id="graphingToolBoolbar" class="graphing-toolbar">
+                <template is="dom-if" if="[[__historyManagerIsEnable(allowedButtons)]]" restamp="true">
+                    <graphing-tool-history-manager
+                        undo="{{_undo}}"
+                        has-undo="{{_hasUndo}}"
+                        redo={{_redo}}
+                        has-redo="{{_hasRedo}}"
+                        history-manager-default-value="[[_historyManagerDefaultValue]]"
+                        data="[[coordinateResponseData]]"></graphing-tool-history-manager>
+                    <ul class="reset-list graphing-toolbar-list">
+                        <!-- Undo -->
+                        <li class="toolbar-list-item">
+                            <graph-button
+                                inactive-is-default-state="true"
+                                type="undo" on-tap="__undo" group="history" />
+                        </li>
+                        <!-- Undo -->
+
+                        <!-- Redo -->
+                        <li class="toolbar-list-item">
+                            <graph-button
+                                inactive-is-default-state="true"
+                                type="redo" on-tap="__redo" group="history" />
+                        </li>
+                        <!-- Redo -->
+                    </ul>
+                    <span class="toolbar-history-delimiter-container">
+                        <span class="toolbar-history-delimiter-visual"></span>
+                    </span>
+                </template>
+
+                <ul class="reset-list graphing-toolbar-list" id="graphingToolBoolbarListContainer">
+                    <template is="dom-repeat" items="[[_buttons]]">
+                        <li class="toolbar-list-item">
+
+                            <graph-button
+                                group="[[item.group]]"
+                                type$="[[item.type]]"
+                                ui-connected-buttons="[[item.uiConnectedButtons]]"
+                                linked-buttons="[[item.linkedButtons]]"
+                                inactive-is-default-state="[[item.inactive-is-default-state]]"
+                                on-tap="__updateSVG" />
+                        </li>
+                    </template>
+                </ul>
+            </nav>
+            <!-- Right Part -->
+        </section>
+
+        <iron-signals on-iron-signal-zoomChange="onSignalExternalZoomIsUpdated"></iron-signals>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'graphing-tool-interaction',
+
+            // @see App.Interactions.Graphs.CoordinateSystem.Behaviors.SharedProperties
+
+            properties: {
+
+                allowedButtons: {
+                    type: Object
+                },
+
+                /**
+                 * @property variable is saving a reference about XML data
+                 */
+                _historyManagerDefaultValue: {
+                    type: Object,
+                    value: function() { return {}; },
+                },
+
+                _undo: {
+                    type: Array,
+                    value: function() { return []; },
+                    notify: true
+                },
+
+                _hasUndo: {
+                    type: Boolean,
+                    value: false,
+                    notify: true
+                },
+
+                _redo: {
+                    type: Array,
+                    value: function() { return []; },
+                    notify: true
+                },
+
+                _hasRedo: {
+                    type: Boolean,
+                    value: false,
+                    notify: false
+                }
+            },
+
+            observers: [
+                // @see App.Interactions.Graphs.CoordinateSystem.Behaviors.CoordinateSystemTapHover
+                '_toggleHoverEvents(interactionSettings.hoverIsEnable)',
+                '__hasUndoIsUpdated(_hasUndo)',
+                '__hasRedoIsUpdated(_hasRedo)'
+            ],
+
+            behaviors : [
+                App.Interactions.Graphs.CoordinateSystem.Behaviors.SharedProperties,
+
+                /* Collections */
+                App.Collections.Behaviors.Object,
+                /* Collections */
+
+                /* Base */
+                App.Interactions.Graphs.D3.Behaviors.Base,
+                App.Interactions.Graphs.D3.Behaviors.Corrections,
+                App.Interactions.Graphs.D3.Behaviors.Margin,
+                App.Interactions.Graphs.D3.Behaviors.ScaleLinear,
+                App.Interactions.Graphs.D3.Behaviors.Styles,
+                /* Base */
+
+                /* GeometricFigures */
+                App.Interactions.Graphs.D3.GeometricFigures.Behaviors.Circle,
+                App.Interactions.Graphs.D3.GeometricFigures.Behaviors.Line,
+
+                App.Interactions.Graphs.D3.GeometricFigures.Behaviors.Marker,
+                App.Interactions.Graphs.D3.GeometricFigures.Markers.Arrows.Behaviors.ClosedArrows,
+                /* GeometricFigures */
+
+                /* Coordinate System - Base */
+                App.Interactions.Graphs.CoordinateSystem.Behaviors.CoordinateSystem,
+                App.Interactions.Graphs.CoordinateSystem.Behaviors.CoordinateSystemQuadrants,
+                App.Interactions.Graphs.CoordinateSystem.Behaviors.CoordinateSysteRemoveItem,
+                App.Interactions.Graphs.CoordinateSystem.Behaviors.CoordinateSystemZoom,
+                /* Coordinate System - Base */
+
+                /* Interaction States */
+                App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.BaseInteraction,
+                /* Interaction States */
+
+                /* Coordinate System - Tap and Hover */
+                App.Interactions.Graphs.CoordinateSystem.Behaviors.CoordinateSystemTapHover,
+
+                /* QTI */
+                App.Interactions.Graphs.CoordinateSystem.QTI.Behaviors.AxisConfigurations,
+
+                /* Marker */
+                App.Interactions.Graphs.CoordinateSystem.Markers.Behaviors.Marker,
+
+                /* Circle */
+                App.Interactions.Graphs.CoordinateSystem.Circle.Behaviors.Circle,
+                App.Interactions.Graphs.CoordinateSystem.Circle.Behaviors.MouseOver,
+                App.Interactions.Graphs.CoordinateSystem.Circle.Behaviors.Styles,
+                /* Circle */
+                /* Coordinate System - Tap and Hover */
+
+                /* Coordinate System - Text items */
+                App.Interactions.Graphs.CoordinateSystem.TextItems.Behaviors.Title,
+                App.Interactions.Graphs.CoordinateSystem.TextItems.Behaviors.Label,
+                /* Coordinate System - Text items */
+
+                /* Coordinate System - Styles */
+                App.Interactions.Graphs.CoordinateSystem.Styles.Behaviors.Base,
+                App.Interactions.Graphs.CoordinateSystem.Styles.Behaviors.ActiveItem,
+                App.Interactions.Graphs.CoordinateSystem.Styles.Behaviors.Circle,
+                App.Interactions.Graphs.CoordinateSystem.Styles.Behaviors.Line,
+                /* Coordinate System  - Styles */
+
+                /* Coordinate System - ToolBar */
+                App.Interactions.Graphs.CoordinateSystem.Behaviors.ToolBar,
+                /* Coordinate System - ToolBar */
+            ],
+
+            ready: function() {
+                this.listen(this.querySelector('iron-signals'),
+                    "iron-signal-zoomChange", "onSignalExternalZoomIsUpdated");
+
+                // Initialize graph buttons
+                // App.Interactions.Graphs.CoordinateSystem.Behaviors.ToolBar
+                this.initializeToolbarGraphButtons();
+
+                // Override d3js default settings with QTI configurations
+                // @see App.Interactions.Graphs.CoordinateSystem.QTI.Behaviors.AxisConfigurations
+                this.loadQtiAxisConfigurations(this.coordinateSystemQtiAxisConfigurations);
+
+                this.setWrapper(this.$.coordinateSystem, 'coordinateSystem');
+                this.updateSVGStyles();
+                this.initializeD3Graph();
+                this.drawCoordinateSystem();
+
+                // Add filters
+                // this.d3.blur(this.svgContainer);
+                // this.d3.shadow(this.svgContainer);
+                // this.d3.dropShadow(this.svgContainer);
+
+                this.__setHistoryManagerDefaultValue();
+
+                console.log(this._buttons);
+            },
+
+            /**
+             * Watch iron-signal when user update external / global zoom
+             */
+            onSignalExternalZoomIsUpdated: function(signalData) {
+                this.externalZoom = signalData.detail / 100;
+            },
+
+            /**
+             * @param {PolymerEvent} event
+             */
+            __updateSVG: function(event) {
+                switch (event.model.item.type) {
+                    case 'reset':
+                        // App.Interactions.Graphs.CoordinateSystem.Behaviors.ToolBar
+                        this.resetCurrentWork(event.model.item.type);
+                        break;
+                    default:
+                        // App.Interactions.Graphs.CoordinateSystem.Behaviors.ToolBar
+                        this.toggleButtonStyleAndState(event.model.item.type);
+                        break;
+                }
+            },
+
+            /**** History Section ***/
+
+            /**
+             * @param {Object} allowedButtons
+             */
+            __historyManagerIsEnable: function(allowedButtons) {
+                if (typeof allowedButtons === 'object') {
+                    if (allowedButtons.hasOwnProperty('redo') && allowedButtons.hasOwnProperty('undo')) {
+                        return (allowedButtons.redo && allowedButtons.undo);
+                    }
+                }
+
+                return false;
+            },
+
+            __setHistoryManagerDefaultValue: function() {
+                this._historyManagerDefaultValue = JSON.stringify(this.coordinateResponseData);
+            },
+
+            /**
+             *
+             *
+             * @see https://www.polymer-project.org/1.0/docs/devguide/model-data#get-value
+             */
+            __undo: function() {
+                // The button can't be clicked
+                if (!this._hasUndo) {
+                    return;
+                }
+
+                // If XML is overriding the this.coordinateResponseData
+                // The system need to depricate removing this array item
+                if (this.__undoXMLDataIsActiveItem()) {
+                    // Redo
+                    this._hasRedo = false;
+                    this.set('_redo', []);
+
+                    return;
+                }
+
+                var coordinateResponseData = this.coordinateResponseData;
+
+                // Redo
+                var redo = this._undo.filter(function(item) {
+                    return item.value === JSON.stringify(coordinateResponseData);
+                });
+                // Avoid duplication
+                if (redo.length > 1) {
+                    redo = redo[0];
+                }
+                this.notifyPath('_redo', this._redo.concat(redo));
+
+                // Method will remove the current state
+                this._undo = this._undo.filter(function(item) {
+                    return item.value !== JSON.stringify(coordinateResponseData);
+                });
+
+                if (this._undo.length > 0) {
+                    var item = this.pop('_undo');
+                    this.coordinateResponseData = JSON.parse(item.value);
+                } else {
+                    this.coordinateResponseData = JSON.parse(this._historyManagerDefaultValue);
+                }
+
+                // App.Interactions.Graphs.SubComponents.Behaviors.ToolBar
+                this.updateGraphButtonsStyle('undo');
+
+                // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.BaseInteraction
+                this.setInteractionState('undo');
+            },
+
+            __redo: function() {
+                // The button can't be clicked
+                if (!this._hasRedo) {
+                    return;
+                }
+
+                this._hasRedo = null;
+
+                var item = this.pop('_redo');
+                this.coordinateResponseData = JSON.parse(item.value);
+
+                // App.Interactions.Graphs.SubComponents.Behaviors.ToolBar
+                this.updateGraphButtonsStyle('redo');
+
+                // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.BaseInteraction
+                this.setInteractionState('redo');
+            },
+
+            /**
+             * Method will update the undo toolbar section
+             *
+             * @param {Boolean} hasUndo
+             */
+            __hasUndoIsUpdated: function(hasUndo) {
+                if (hasUndo) {
+                    // App.Interactions.Graphs.CoordinateSystem.Behaviors.ToolBar
+                    this.loadButtonActiveStyle('undo');
+
+                    var data = JSON.stringify(this.coordinateResponseData);
+                    if (data !== this._historyManagerDefaultValue) {
+                        this.loadButtonActiveStyle('reset');
+                    } else {
+                        this.loadGraphButtonInactiveStateByName('reset');
+                    }
+                } else {
+                    if (this._undo.length === 0) {
+                        // App.Interactions.Graphs.CoordinateSystem.Behaviors.ToolBar
+                        this.loadGraphButtonInactiveStateByName('undo');
+                        this.loadGraphButtonInactiveStateByName('reset');
+                    }
+                }
+            },
+
+            /**
+             * Method will update the redo toolbar section
+             *
+             * @param {Boolean} hasRedo
+             */
+            __hasRedoIsUpdated: function(hasRedo) {
+                if (hasRedo) {
+                    // App.Interactions.Graphs.CoordinateSystem.Behaviors.ToolBar
+                    this.loadButtonActiveStyle('redo');
+                } else {
+                    if (this._redo.length === 0) {
+                        // App.Interactions.Graphs.CoordinateSystem.Behaviors.ToolBar
+                        this.loadGraphButtonInactiveStateByName('redo');
+                    }
+                }
+            },
+
+            __undoXMLDataIsActiveItem: function() {
+                return (this._undo.length === 1) &&
+                    (this._undo[0]['value'] === this._historyManagerDefaultValue);
+            }
+            /**** History Section ***/
+        });
+    </script>
+</dom-module>

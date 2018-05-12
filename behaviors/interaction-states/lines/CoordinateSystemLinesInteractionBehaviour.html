@@ -1,0 +1,92 @@
+<!--
+`App.Interactions.Graphs.CoordinateSystem.Lines.InteractionStates.Behaviors.LineInteraction`
+remove the previous svg listeners and prepare the system for drawing (transforming, etc) a line
+-->
+
+<link rel="import" href="../../../../../scripts/namespace.html">
+
+<!--
+Shared properties:
+1. lineDashFactor
+-->
+<link rel="import" href="../../CoordinateSystemSharedPropertiesBehaviour.html">
+
+<link rel="import" href="../../lines/CoordinateSystemLineBehaviour.html">
+<link rel="import" href="../../lines/CoordinateSystemLineStylesBehaviour.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Lines.InteractionStates.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.LineInteraction = [
+            App.Interactions.Graphs.CoordinateSystem.Behaviors.SharedProperties,
+            App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.Line,
+            App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.Styles, {
+
+            properties: {
+                interactionState: {
+                    type: String,
+                    value: null
+                },
+            },
+
+            getSolidLineInteractionState: function() {
+                return 'addSolidLine';
+            },
+
+            getDashedLineInteractionState: function() {
+                return 'addDashedLine';
+            },
+
+            /**
+             * State: solid line
+             */
+            setSolidLineInteractionState: function() {
+                // Change the interaction state
+                this.interactionState = this.getSolidLineInteractionState();
+
+                // Set the dashed factor to be equal to zero
+                this.lineDashFactor = 0;
+
+                this.__loadAddLineInteractionSettings();
+            },
+
+            /**
+             * State: dashed line
+             */
+            setDashedLineInteractionState: function() {
+                // Change the interaction state
+                this.interactionState = this.getDashedLineInteractionState();
+
+                // Set the dashed factor
+                this.lineDashFactor = 5;
+
+                this.__loadAddLineInteractionSettings();
+            },
+
+            callLinesHistoryState: function() {
+                // App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.Line
+                this.reDrawLines();
+            },
+
+            /**
+             * Method is loading the default configurations for drawing type line
+             */
+            __loadAddLineInteractionSettings: function() {
+                // Destroy all event listeners
+                this.destroyCoordinateSystemListeners();
+
+                // The user is able to add a points
+                // this.settings.zoomIsActive = false;
+
+                // Attach event listener (Draw line)
+                // App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.Line
+                this.attachAddLineListener();
+
+                // App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.Styles
+                // Disabled for Phase I
+                // this.transformActiveLines(this.lineDashFactor);
+            }
+        }]
+    });
+</script>

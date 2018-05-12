@@ -1,0 +1,179 @@
+<link rel="import" href="../../../scripts/namespace.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.CoordinateSystemTapHover = {
+
+            properties: {
+                coordinates: {
+                    type: Object,
+                    value: {
+                        x: 0,
+                        y: 0
+                    }
+                },
+            },
+
+            _tapIsAtMarginArea: function(currentElement) {
+                // Ignore the click event if it was suppressed
+                if (this.d3.event.defaultPrevented) return;
+
+                var coords = this.d3.mouse(currentElement);
+                var x = coords[0];
+                var y = coords[1];
+
+                // Top
+                if (y < this.margin.top) {
+                    return true;
+                }
+
+                // Right
+                if (x > this.dimensions.width + this.margin.left) {
+                    return true;
+                }
+
+                // Bottom
+                if (y > this.dimensions.height + this.margin.top) {
+                    return true;
+                }
+
+                // Left
+                if (x < this.margin.left) {
+                    return true;
+                }
+
+                return false;
+            },
+
+            /**
+             * Method will:
+             * Ignore other events and will get a mouse coordinates
+             *
+             * @param {Object} currentElement
+             */
+            _onTapDefaultBehavior: function(currentElement) {
+
+                // Ignore the click event if it was suppressed
+                if (this.d3.event.defaultPrevented) return;
+
+                var coords = this.d3.mouse(currentElement);
+
+                this.coordinates = {
+                    x: coords[0],
+                    y: coords[1]
+                };
+
+                this.coordinates = this.addCoordinatesCorrections(this.coordinates);
+            },
+
+            /**
+             * Method enable or disable coordinate system events
+             *
+             * @param {Boolean} hoverIsEnable
+             */
+            _toggleHoverEvents: function(hoverIsEnable) {
+                if (typeof this.containerTempObjects !== 'object') {
+                    return;
+                }
+
+                if (hoverIsEnable) {
+                    // Enable points hover effect
+                    this.attachCircleHoverEvents(this.containerTempObjects);
+                } else {
+                    // Disable points hover effect
+                    this.detachCircleHoverEvents(this.containerTempObjects);
+                }
+            },
+
+            /**
+             * Get the domain value corresponding to a given range value
+             *
+             * @see https://github.com/d3/d3-3.x-api-reference/blob/master/Time-Scales.md#invert
+             */
+            _invertCoordinates: function(point) {
+                var xScale = this.axis.xAxis.scale;
+                var yScale = this.axis.yAxis.scale;
+
+                // Normally we go from data to pixels, but here we're doing pixels to data
+                var invertCoordinates = {
+                    // Takes the pixel number to convert to number
+                    x: Math.round( xScale.invert(point.x)),
+
+                    // Takes the pixel number to convert to number
+                    y: Math.round( yScale.invert(point.y))
+                };
+
+                // console.log('Invert x:', invertCoordinates.x / this.externalZoom);
+                // console.log('Invert y:', invertCoordinates.y / this.externalZoom);
+
+                return invertCoordinates;
+            },
+
+            /**
+             * Method is using:
+             * 1. Invert coordinates (Transform pixel to scale grid coordinates)
+             * 2. Transform scale coordinates to pixels
+             *
+             * @param {Object} point has two attributes (x and y)
+             *
+             * @return {Object} snapToGridCoordinates
+             */
+            _snapToGridCoordinates: function(point) {
+                var invertCoordinates = this._invertCoordinates(point);
+
+                var snapToGridCoordinates = {
+                    x: this.axis.xAxis.scale(invertCoordinates.x),
+                    y: this.axis.yAxis.scale(invertCoordinates.y)
+                };
+
+                return snapToGridCoordinates;
+            },
+
+            /**
+             * Adding offset position for current position
+             *
+             * @see https://bl.ocks.org/mbostock/7ec977c95910dd026812
+             *
+             * @param {Object} coordinates
+             */
+            _calcululateCoordinatesByZoomScale: function(coordinates) {
+                var scale = this.zoom.scale();
+                var translate = this.zoom.translate();
+
+                var quadrants = this.determineQuadrantsSigns(coordinates);
+                var center = this.getCenter();
+
+                var targetTranslate = {
+                    x: (center.horizontal - coordinates.x) / scale,
+                    y: (center.vertical - coordinates.y) / scale
+                };
+
+                console.log(targetTranslate);
+
+                if (scale > 1) {
+                    // Test
+                    // this.coordinateResponseData.dots.push(point);
+                    this.addCircles(
+                        this.containerTempObjects,
+                        this.coordinateResponseData.dots
+                    );
+                }
+
+                // console.log('Scale: ', this.zoom.scale());
+                // console.log('Coordinates', coordinates);
+                // console.log('translate', translate);
+
+                // var scale = this.zoom.scale();
+                // var translate = this.zoom.translate();
+                // var key = (axisDirection === 'x') ? 0 : 1;
+                // var tempCoordinate = originalPosition * scale + translate[key];
+                // console.log(tempCoordinate);
+                // var translateCoordinate = translate[key] + originalPosition - tempCoordinate;
+
+                // return tempCoordinate;
+            },
+        }
+    });
+</script>

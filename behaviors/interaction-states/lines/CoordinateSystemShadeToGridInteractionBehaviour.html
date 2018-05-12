@@ -1,0 +1,71 @@
+<!--
+`App.Interactions.Graphs.CoordinateSystem.Lines.InteractionStates.Behaviors.ShadeToGrid`
+remove the previous svg listeners and prepare the system for:
+1. Line shade to grid
+2. remove the shade from line
+-->
+<link rel="import" href="../../../../../scripts/namespace.html">
+
+<link rel="import" href="../../lines/CoordinateSystemLineShadeGridBehaviour.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Lines.InteractionStates.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.ShadeToGrid = [
+            App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.ShadeToGrid, {
+
+            properties: {
+                interactionState: {
+                    type: String,
+                    value: null
+                },
+            },
+
+            getLineShadeToGridState: function() {
+                return 'lineShadeToGrid';
+            },
+
+            getLineRemoveShadeToGridState: function() {
+                return 'lineRemoveShadeToGrid';
+            },
+
+            /**
+             * State: line shade to grid
+             */
+            setLineShadeToGridState: function() {
+                // Change the interaction state
+                this.interactionState = this.getLineShadeToGridState();
+
+                this.__loadLineShadeToGridInteractionSettings();
+
+                // App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.ShadeToGrid
+                this.attachLineShadeToGridListener();
+            },
+
+             /**
+              * State: remove from line shade to grid
+              */
+             setLineRemoveShadeToGridState: function() {
+                 // Change the interaction state
+                 this.interactionState = this.getLineRemoveShadeToGridState();
+
+                 this.__loadLineShadeToGridInteractionSettings();
+
+                 // App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.ShadeToGrid
+                 this.attachRemoveLineShadeToGridListener();
+             },
+
+             /**
+              * Method is loading the default configurations
+              * These configurations are shared between: shade to grid and remove the shade from line
+              */
+             __loadLineShadeToGridInteractionSettings: function() {
+                 // Destroy all event listeners
+                 // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.BaseInteraction
+                 this.destroyCoordinateSystemListeners();
+             },
+
+        }];
+    });
+</script>

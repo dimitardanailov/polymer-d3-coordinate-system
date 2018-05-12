@@ -1,0 +1,139 @@
+<link rel="import" href="../../../../scripts/namespace.html">
+
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Styles.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.ActiveItem = {
+
+            /**
+             * @return {String}
+             */
+            getActiveClassName: function() {
+                return 'active-d3-item';
+            },
+
+            /**
+             * Method is removing or adding the active class for this item
+             * If necessary to add the class name the system should remove other
+             * active items
+             *
+             * @param {Object} item
+             *
+             * @return {Boolean} hasActiveClassName
+             */
+            toggleItemState: function(item) {
+                var hasActiveClassName = this.__itemHasActiveClass(item);
+                if (hasActiveClassName) {
+                    this.removeActiveItemState(item);
+                } else {
+                    this.addActiveItemState(item);
+                }
+
+                return (!hasActiveClassName);
+            },
+
+            /**
+             * @param {Object} d3Collection
+             * @param {String} selector
+             * @param {Array} indexes these indexes should be excluded by d3 filter
+             *
+             * @return {D3ArrayItem} items
+             */
+            deactiveItemBySequince: function(d3Collection, selector, indexes) {
+                var self = this;
+                var item,
+                    hasActiveClassName,
+                    collectionHasIndex;
+
+                var activeItems =
+                    d3Collection
+                        .selectAll(selector)
+                            .filter(function(d, i) {
+                                item = self.d3.select(this);
+                                hasActiveClassName = self.__itemHasActiveClass(item);
+
+                                //App.Interactions.Graphs.D3.Behaviors.indexExistsInCollection
+                                collectionHasIndex = self.indexExistsInCollection(i, indexes);
+
+                                return (!collectionHasIndex && hasActiveClassName);
+                            })
+                            .attr('class', function() {
+                                // @see App.Interactions.Graphs.D3.Behaviors.Styles
+                                return self.removeD3CssClass(
+                                    this,
+                                    self.getActiveClassName()
+                                );
+                            });
+
+                return activeItems;
+            },
+
+            /**
+             * Method is removing active class from collection
+             *
+             * @param {Object} d3Collection
+             */
+            removeActiveStylesByD3Collection: function(d3Collection) {
+                var activeItems = this.getActiveItems(d3Collection);
+                var self = this;
+                activeItems.attr('class', function() {
+                    // @see App.Interactions.Graphs.D3.Behaviors.Styles
+                    return self.removeD3CssClass(
+                        this,
+                        self.getActiveClassName()
+                    );
+                });
+            },
+
+            /**
+             * Method is giving information about the active items
+             *
+             * @param {Object} d3Collection
+             *
+             * @return {Object} activeItems
+             */
+            getActiveItems: function(d3Collection) {
+                var selector = '.' + this.getActiveClassName();
+
+                return d3Collection.selectAll(selector);
+            },
+
+            /**
+             * @param {Object} item
+             */
+            removeActiveItemState: function(item) {
+                // App.Interactions.Graphs.D3.Behaviors.Styles
+                var className = this.removeCssClassName(
+                    item.attr('class'),
+                    this.getActiveClassName()
+                );
+
+                item.attr('class', className);
+            },
+
+            /**
+             * @param {Object} item
+             */
+            addActiveItemState: function(item) {
+                // App.Interactions.Graphs.D3.Behaviors.addCssClassName
+                var newClassName = this.addCssClassName(
+                    item.attr('class'),
+                    this.getActiveClassName()
+                );
+
+                item.attr('class', newClassName);
+            },
+
+            /**
+             * @param {Object} item
+             */
+            __itemHasActiveClass: function(item) {
+                var className = item.attr('class');
+
+                return className.includes(this.getActiveClassName());
+            },
+        }
+    });
+</script>

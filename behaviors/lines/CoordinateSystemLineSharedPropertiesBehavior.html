@@ -1,0 +1,28 @@
+<!--
+`App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.SharedProperties`
+is storing information about the shared properties between the namespace -
+`App.Interactions.Graphs.CoordinateSystem.Line.Behaviors`
+-->
+
+<link rel="import" href="../../../../scripts/namespace.html">
+
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Line.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.SharedProperties = {
+
+            /**
+             * @property has reference to the main Line Container ('g' container)
+             */
+            containerLines: {
+                type: Object
+            },
+
+            getDrawingLineClassNameContainer: function() {
+                return 'drawing-type-line-container';
+            },
+        };
+    });
+</script>

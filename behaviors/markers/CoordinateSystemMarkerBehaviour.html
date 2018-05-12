@@ -1,0 +1,80 @@
+<link rel="import" href="../../../../scripts/namespace.html">
+
+<link rel="import" href="lines/CoordinateSystemMarkerLineBehaviour.html">
+<link rel="import" href="rays/CoordinateSystemMarkerRayBehaviour.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Markers.Behaviors', function(namespace) {
+
+        namespace.Marker = [
+            App.Interactions.Graphs.CoordinateSystem.Markers.Behaviors.LineMarker,
+            App.Interactions.Graphs.CoordinateSystem.Markers.Behaviors.RayMarker, {
+
+            /***** CONSTANTS *****/
+
+            /**
+             * Marker type: arrow-end
+             */
+            getArrowMarkerEnd: function() {
+                var markerProperties = this.__getMarkerArrowProperties();
+
+                var pathProperties = {
+                    'd': 'M0,-5L10,0L0,5'
+                };
+
+                var properties = {
+                    markerProperties: markerProperties,
+                    pathProperties: pathProperties
+                };
+
+                return properties;
+            },
+
+            initializeDefinitionsMarkers: function() {
+                // Draw for line and segment available marker types
+                this.drawCoordinateSystemDrawingMarkers();
+
+                // Draw axis marker arrow head
+                if (this.axisConfigirations.xAxis.drawArrowHead ||
+                    this.axisConfigirations.yAxis.drawArrowHead) {
+
+                    // App.Interactions.Graphs.D3.GeometricFigures.Markers.Arrows.Behaviors.ClosedArrows
+                    this.drawAxisClosedArrowMarkers(this.svgContainer);
+                }
+            },
+
+            drawCoordinateSystemDrawingMarkers: function() {
+                // App.Interactions.Graphs.CoordinateSystem.Markers.Behaviors.LineMarker
+                var lineMarkers = this.generateLineDrawingMarkers();
+                this.drawCoordinateSystemMarkerConstans(lineMarkers);
+
+                // App.Interactions.Graphs.CoordinateSystem.Markers.Behaviors.RayMarker
+                var rayMarkers = this.generateRayDrawingMarkers();
+                this.drawCoordinateSystemMarkerConstans(rayMarkers);
+            },
+
+            /**
+             * Method is creating the `defs` markers
+             *
+             * @param {Object} markers keys are: markerProperties and pathProperties
+             */
+            drawCoordinateSystemMarkerConstans: function(markers) {
+                var keys = Object.keys(markers);
+
+                var key, marker;
+                for (var i = 0; i < keys.length; i++) {
+                    key = keys[i];
+                    marker = markers[key];
+
+                    // App.Interactions.Graphs.D3.GeometricFigures.Behaviors.Marker
+                    this.drawMarkers(
+                        this.svgContainer,
+                        [key],
+                        marker.markerProperties,
+                        marker.pathProperties
+                    );
+                }
+            },
+        }];
+    });
+</script>

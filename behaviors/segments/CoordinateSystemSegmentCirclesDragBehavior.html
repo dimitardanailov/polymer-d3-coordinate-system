@@ -1,0 +1,176 @@
+<!--
+`App.Interactions.Graphs.CoordinateSystem.Segment.Behaviors.DragCircle` is caring about
+the drag and drop at the starting point (circle)
+-->
+
+<link rel="import" href="../../../../scripts/namespace.html">
+
+<!--
+Shared properties:
+1. interactionSettings.snapToGridIsEnable
+-->
+<link rel="import" href="../CoordinateSystemSharedPropertiesBehaviour.html">
+<link rel="import" href="../CoordinateSystemSnapToGridBehaviour.html">
+
+<link rel="import" href="CoordinateSystemSegmentSharedPropertiesBehavior.html">
+<link rel="import" href="CoordinateSystemSegmentStylesBehaviour.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Segment.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.DragCircle = [
+            App.Interactions.Graphs.CoordinateSystem.Behaviors.SharedProperties,
+            App.Interactions.Graphs.CoordinateSystem.Behaviors.SnapToGrid,
+
+            App.Interactions.Graphs.CoordinateSystem.Segment.Behaviors.SharedProperties,
+            App.Interactions.Graphs.CoordinateSystem.Segment.Behaviors.Styles, {
+
+            /*** Constants ***/
+
+            getSegmentCircleDraggingClassName: function() {
+                return 'segment-circle-dragging';
+            },
+
+            /*** Constants ***/
+
+            attachCircleSegmentsDraggableBehavior: function() {
+                var drag = this.__getSegmentCircleDragBehavior();
+
+                this.containerDotsWithLineConnection
+                    .selectAll('g')
+                        .selectAll('circle')
+                        .call(drag);
+            },
+
+            detachCircleSegmentsDraggableBehavior: function() {
+                this.containerDotsWithLineConnection
+                    .selectAll('g')
+                        .selectAll('circle')
+                            .on('mousedown.drag', null);
+            },
+
+            /**
+             * @see https://bl.ocks.org/mbostock/6123708
+             * @see http://bl.ocks.org/sgruhier/1d692762f8328a2c9957
+             * @see https://github.com/d3/d3/blob/master/API.md#dragging-d3-drag
+             * @see http://bl.ocks.org/mbostock/1557377
+             * @see https://jsfiddle.net/3k2u8buk/
+             * @see https://bl.ocks.org/dimitardanailov/bb12fef05c5ed56e793728ed8e84bb81
+             *
+             * @return {D3Function} drag
+             */
+            __getSegmentCircleDragBehavior: function() {
+                var self = this;
+
+                var drag = this.d3.behavior.drag()
+                    .on('dragstart', function() {
+                        self.__segmentCircleDragstarted(this);
+                    })
+                    .on('drag', function(d) {
+                        self.__segmentCircleDragged(d, this);
+                    })
+                    .on('dragend', function(d) {
+                        self.__segmentCircleDragended(this);
+                    });
+
+                return drag;
+            },
+
+            /**
+             * @see https://bl.ocks.org/dimitardanailov/bb12fef05c5ed56e793728ed8e84bb81
+             *
+             * @param {D3Object} currentElement
+             */
+            __segmentCircleDragstarted: function(currentElement) {
+                // silence other listeners
+                this.d3.event.sourceEvent.stopPropagation();
+
+                this.d3.select(currentElement)
+                    .classed(this.getSegmentCircleDraggingClassName(), true);
+
+                // App.Interactions.Graphs.CoordinateSystem.Ray.Behaviors.Styles
+                var group = this.d3.select(currentElement.parentNode);
+                this.toggleSegmentState(group);
+            },
+
+            /**
+             * @see https://bl.ocks.org/dimitardanailov/bb12fef05c5ed56e793728ed8e84bb81
+             *
+             * @param {Object} d backend data
+             * @param {D3Object} currentElement
+             */
+            __segmentCircleDragged: function(d, currentElement) {
+                var circle = this.d3.select(currentElement);
+
+                d.x += (this.d3.event.dx / this.externalZoom);
+                d.y += (this.d3.event.dy / this.externalZoom);
+
+                // Update the end point coordinates
+                circle
+                    .attr('cx', d.x)
+                    .attr('cy', d.y);
+
+                var group = this.d3.select(currentElement.parentNode);
+                var line = group.selectAll('line');
+
+                if (!line.empty()) {
+                    var previousItem = this.d3.select(currentElement.previousElementSibling);
+                    var markerMark = previousItem.empty() ? 'marker-start' : 'marker-end';
+
+                    // Update the line coordinates
+                    line
+                        .attr('x1', function(lineData) {
+                            return markerMark === 'marker-start' ? lineData.x1 = d.x : lineData.x1;
+                        })
+                        .attr('y1', function(lineData) {
+                            return markerMark === 'marker-start' ? lineData.y1 = d.y : lineData.y1;
+                        })
+                        .attr('x2', function(lineData) {
+                            return markerMark === 'marker-end' ? lineData.x2 = d.x : lineData.x2;
+                        })
+                        .attr('y2', function(lineData) {
+                            return markerMark === 'marker-end' ? lineData.y2 = d.y : lineData.y2;
+                        });
+                }
+            },
+
+            /**
+             * @see https://bl.ocks.org/dimitardanailov/bb12fef05c5ed56e793728ed8e84bb81
+             *
+             * @param {D3Instance} currentElement
+             */
+            __segmentCircleDragended: function(currentElement) {
+                // silence other listeners
+                this.d3.event.sourceEvent.stopPropagation();
+
+                // App.Interactions.Graphs.CoordinateSystem.Ray.Behaviors.Styles
+                this.rollbackSegmentsNormalStyles(this.containerDotsWithLineConnection.selectAll('g'));
+
+                var circle = this.d3.select(currentElement);
+                circle.classed(this.getSegmentCircleDraggingClassName(), false);
+
+                // Snap to grid is enable
+                if (this.interactionSettings.snapToGridIsEnable) {
+                    var group = this.d3.select(currentElement.parentNode);
+
+                    // App.Interactions.Graphs.CoordinateSystem.Behaviors.SnapToGrid
+                    this.snapToGridCircle(circle);
+
+                    var line = group.selectAll('line');
+                    if (!line.empty()) {
+                        // App.Interactions.Graphs.CoordinateSystem.Behaviors.SnapToGrid
+                        this.snapToGridRayLine(line);
+                    }
+                }
+
+                // Update the heart beat
+                this.notifyPath('coordinateResponseData.segmentsDots',
+                    this.coordinateResponseData.segmentsDots.map(function(d) { return d }));
+
+                this.notifyPath('coordinateResponseData.segmentsLines',
+                    this.coordinateResponseData.segmentsLines.map(function(d) { return d }));
+            }
+        }];
+    });
+</script>

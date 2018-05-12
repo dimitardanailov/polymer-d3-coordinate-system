@@ -1,0 +1,23 @@
+<!--
+`App.Interactions.Graphs.CoordinateSystem.Circle.Behaviors.SharedProperties`
+is storing information about the shared properties between the namespace -
+`App.Interactions.Graphs.CoordinateSystem.Circle`
+-->
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Circle.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.SharedProperties = {
+
+            properties: {
+                /**
+                 * @property container will store all dots / single points
+                 */
+                containerDots: {
+                    type: Object
+                }
+            },
+        }
+    });
+</script>

@@ -1,0 +1,304 @@
+<link rel="import" href="../../../../scripts/namespace.html">
+
+<link rel="import" href="../../../../behaviors/collections/ObjectBehavior.html">
+
+<link rel="import" href="../../../behaviors/graphing-interactions/D3StylesBehaviour.html">
+
+<link rel="import" href="../styles/CoordinateSystemActiveItemStyleBehaviour.html">
+
+<!--
+Shared properties
+1. rayContainer
+-->
+<link rel="import" href="CoordinateSystemRaySharedPropertiesBehavior.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Ray.Behaviors', function(namespace) {
+
+        namespace.Styles = [
+            App.Collections.Behaviors.Object,
+
+            App.Interactions.Graphs.D3.Behaviors.Styles,
+
+            App.Interactions.Graphs.CoordinateSystem.Styles.Behaviors.ActiveItem,
+
+            App.Interactions.Graphs.CoordinateSystem.Ray.Behaviors.SharedProperties, {
+
+            /**** QTI ****/
+
+            /**
+             * @param {Object} styles
+             */
+            updateRayStyles: function(styles) {
+                if (styles.hasOwnProperty('points')) {
+                    this.updateRayPointStyles(styles.points);
+                }
+
+
+                if (styles.hasOwnProperty('lines')) {
+                    this.updateRayLineStyles(styles.lines);
+                }
+
+                // Override the default styles
+                this.updateStyles();
+            },
+
+            /** Point QTI XML - styles ****/
+
+            /**
+             * @param {Object} pointStyles
+             */
+            updateRayPointStyles: function(pointStyles) {
+                // Normal Styles
+                this.updateRayPointNormalStyles(pointStyles.styleNormalState);
+
+                // Hover / Active Styles
+                this.updateRayPointHoverStyles(pointStyles.styleHoverState);
+            },
+
+            /**
+             * Method is updating the point normal / default styles
+             *
+             * @param {Object} styles
+             */
+            updateRayPointNormalStyles: function(styles) {
+                // circle: fill
+                if (styles.fill !== null) {
+                    this.customStyle['--coordinate-system-ray-circle-fill'] =
+                        styles.fill;
+                }
+
+                // circle: stroke
+                if (styles.stroke !== null) {
+                    this.customStyle['--coordinate-system-ray-circle-stroke'] =
+                        styles.stroke;
+                }
+
+                // circle: stroke width
+                if (styles.strokeWidth !== null) {
+                    this.customStyle['--coordinate-system-ray-circle-stroke-width'] =
+                        styles.strokeWidth;
+                }
+            },
+
+            /**
+             * Method is updating the point hover and active styles
+             *
+             * @param {Object} styles
+             */
+            updateRayPointHoverStyles: function(styles) {
+                // circle: fill
+                if (styles.fill !== null) {
+                    this.customStyle['--coordinate-system-active-ray-circle-fill'] =
+                        styles.fill;
+                }
+
+                // circle: stroke
+                if (styles.stroke !== null) {
+                    this.customStyle['--coordinate-system-active-ray-circle-stroke'] =
+                        styles.stroke;
+                }
+
+                // circle: stroke width
+                if (styles.strokeWidth !== null) {
+                    this.customStyle['--coordinate-system-active-ray-circle-stroke-width'] =
+                        styles.strokeWidth;
+                }
+            },
+
+            /** Line QTI XML - styles ****/
+
+            /**
+             * @param {Object} lineStyles
+             */
+            updateRayLineStyles: function(lineStyles) {
+                // Normal Styles
+                this.updateRayLineNormalStyles(lineStyles.styleNormalState);
+
+                // Hover / Active styles
+                this.updateRayLineHoverStyles(lineStyles.styleHoverState);
+            },
+
+            /**
+             * @param {Object} styles
+             */
+            updateRayLineNormalStyles: function(styles) {
+                if (styles.stroke !== null) {
+                    this.customStyle['--coordinate-system-ray-line-stroke'] =
+                        styles.stroke;
+                }
+
+                // line: stroke-width
+                if (styles.strokeLineWidth !== null) {
+                    this.customStyle['--coordinate-system-ray-line-stroke-width'] =
+                        styles.strokeLineWidth;
+                }
+            },
+
+            /**
+             * Method is updating the line hover and active styles
+             *
+             * @param {Object} styles
+             */
+            updateRayLineHoverStyles: function(styles) {
+                // line: stroke
+                if (styles.stroke !== null) {
+                    this.customStyle['--coordinate-system-active-ray-line-stroke'] =
+                        styles.stroke;
+                }
+
+                // line: stroke-width
+                if (styles.strokeLineWidth !== null) {
+                    this.customStyle['--coordinate-system-active-ray-line-stroke-width'] =
+                        styles.strokeLineWidth;
+                }
+            },
+            /**** QTI ****/
+
+            /**
+             * @param {D3Object} group
+             */
+             toggleRayState: function(group) {
+                 var line = group.selectAll('line');
+                 var circle = group.selectAll('circle');
+
+                if (!line.empty() && !circle.empty()) {
+                    // App.Interactions.Graphs.CoordinateSystem.Styles.Behaviors.ActiveItem
+                    var circleIsActive = this.toggleItemState(circle);
+
+                    // App.Interactions.Graphs.CoordinateSystem.Styles.Behaviors.ActiveItem
+                    var lineIsActive = this.toggleItemState(line);
+
+                    if (circleIsActive && lineIsActive) {
+                        this.deactiveRaySiblings(group);
+
+                        // Shadows
+                        // circle.attr('filter', 'url(#dropshadow)');
+                        // line.attr('filter', 'url(#dropshadow)');
+
+                        this.__updateRayEndPoint(line, 'active');
+                    } else {
+                        // Shadows
+                        circle.attr('filter', null);
+                        line.attr('filter', null);
+
+                        this.__updateRayEndPoint(line, 'normal');
+                    }
+                }
+            },
+
+            /**
+             * @param {D3Object} group
+             */
+            deactiveRaySiblings: function(group) {
+                var data = group.datum();
+
+                var self = this;
+                var groupItems = this.rayContainer
+                    .selectAll('g')
+                    .filter(function(d) {
+                        return (!self.objectsAreEqual(d, data));
+                    });
+
+                this.rollbackRaysNormalStyles(groupItems);
+            },
+
+            /**
+             * Method is iterating the all group items and revet d3 objects
+             * to normal states (remove the active class name)
+             *
+             * @param {D3ArrayObject} groupItems
+             */
+            rollbackRaysNormalStyles: function(groupItems) {
+                // App.Interactions.Graphs.CoordinateSystem.Styles.Behaviors.ActiveItem
+                var activeItemClassName = this.getActiveClassName();
+
+                var self = this;
+                groupItems
+                    .selectAll('line')
+                        .attr('class', function() {
+                            // App.Interactions.Graphs.D3.Behaviors.Styles
+                            return self.removeD3CssClass(this, activeItemClassName);
+                        })
+                        .attr('filter', null)
+                        .attr('marker-start', 'url(#ray-normal-marker-start)')
+                        .attr('marker-end', 'url(#ray-normal-marker-end)');
+
+                groupItems
+                    .selectAll('circle')
+                        .attr('filter', null)
+                        .attr('class', function() {
+                            // App.Interactions.Graphs.D3.Behaviors.Styles
+                            return self.removeD3CssClass(this, activeItemClassName);
+                        });
+            },
+
+            /**** Transformation ****/
+
+            /**
+             * @param {Boolean} pointsAreOpen
+             * @param {Number} lineDashFactor
+             */
+            transformActiveRays: function(pointsAreOpen, lineDashFactor) {
+                // Point
+                this.transformActiveRayPoints(pointsAreOpen);
+
+                // Line
+                this.transformActiveRayLines(lineDashFactor);
+            },
+
+            /**
+             * @param {Boolean} pointsAreOpen
+             */
+            transformActiveRayPoints: function(pointsAreOpen) {
+                var items = this.rayContainer.selectAll('circle');
+
+                // App.Interactions.Graphs.D3.GeometricFigures.Behaviors.Circle
+                this.changeActiveCircleData(
+                    pointsAreOpen,
+                    items,
+                    this.coordinateResponseData.raysDots
+                );
+            },
+
+            /**
+             * @param {Number} lineDashFactor
+             */
+            transformActiveRayLines: function(lineDashFactor) {
+                var items = this.rayContainer.selectAll('line');
+
+                // App.Interactions.Graphs.D3.GeometricFigures.Behaviors.Line
+                this.changeActiveLineData(
+                    lineDashFactor,
+                    items,
+                    this.coordinateResponseData.raysLines
+                );
+            },
+            /**** Transformation ****/
+
+            /**** Marker ****/
+            /**
+             * @param {D3ArrayItem} lines
+             */
+            __removeRayLineActiveMarkersSettings: function(lines) {
+                var self = this;
+                var line;
+                lines.each(function() {
+                    line = self.d3.select(this);
+
+                    self.__updateRayEndPoint(line, 'normal');
+                });
+            },
+
+            /**
+             * @param {D3Item} line
+             * @param {strict} prefix
+             */
+            __updateRayEndPoint: function(line, prefix) {
+                line.attr('marker-end', 'url(#ray-' +  prefix + '-marker-end)');
+            },
+            /**** Marker ****/
+        }]
+    });
+
+</script>

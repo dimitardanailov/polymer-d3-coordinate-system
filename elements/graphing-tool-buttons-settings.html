@@ -1,0 +1,241 @@
+<link rel="import" href="../../../polymer/polymer.html">
+
+<dom-module id="graphing-tool-buttons-settings">
+
+    <script>
+        (function () {
+
+            /**
+             * 1)
+             * linked Buttons are buttons which are connected after drawing an item
+             * Example: If the student is drawing a closed point and reach the
+             * maximum items then open
+             *
+             * 2)
+             * ui buttons are buttonss which are connected before drawing an item
+             * (When the button is active)
+             */
+
+            var uiConnectedButtons = [
+                // Points
+                'addOpenPoint',
+                'addClosedPoint',
+
+                // Lines
+                'addSolidLine',
+                'addDashedLine',
+
+                // Segments
+                'addSolidSegmentWithClosedPoints',
+                'addSolidSegmentWithOpenPoints',
+
+                'addDashedSegmentWithClosedPoints',
+                'addDashedSegmentWithOpenPoints',
+
+                // Rays
+                'addSolidRayWithClosedPoints',
+                'addSolidRayWithOpenPoints',
+
+                'addDashedRayWithClosedPoints',
+                'addDashedRayWithOpenPoints',
+
+                // Shade to grid
+                'lineShadeToGrid',
+                'lineRemoveShadeToGrid',
+
+                // Remove
+                'removeItem'
+            ];
+
+            var filter = function(currentItem) {
+                return uiConnectedButtons.filter(function(item) {
+                    return item !== currentItem;
+                });
+            };
+
+            /**
+             * Function return specific group (segments, rays)
+             * Function reduce mistakes and configurations settings
+             * @example: getGroup('segment', 'addSolidSegmentWithClosedPoints')
+             * the respone will be all segments uiConnectedButtons without to be
+             * to be included: 'addSolidSegmentWithClosedPoints'
+             */
+            var getGroup = function(groupName, itemName) {
+                return uiConnectedButtons.filter(function(item) {
+                    var regExp = new RegExp(groupName);
+
+                    return item.toLowerCase().match(regExp) && itemName !== item;
+                });
+            };
+
+            var buttons = [
+                /*** Points ***/
+                {
+                    type: 'addClosedPoint',
+                    uiConnectedButtons: filter('addClosedPoint'),
+                    linkedButtons: [ 'addOpenPoint' ],
+                    'inactive-is-default-state': false,
+                    group: 'point'
+                },
+                {
+                    type: 'addOpenPoint',
+                    uiConnectedButtons: filter('addOpenPoint'),
+                    linkedButtons: ['addClosedPoint'],
+                    'inactive-is-default-state': false,
+                    group: 'point'
+                },
+                /*** Points ***/
+
+                /*** Lines ***/
+                {
+                    type: 'addSolidLine',
+                    uiConnectedButtons: filter('addSolidLine'),
+                    linkedButtons: ['addDashedLine'],
+                    'inactive-is-default-state': false,
+                    group: 'line'
+                },
+                {
+                    type: 'addDashedLine',
+                    uiConnectedButtons: filter('addDashedLine'),
+                    linkedButtons: ['addSolidLine'],
+                    'inactive-is-default-state': false,
+                    group: 'line'
+                },
+                /*** Lines ***/
+
+                /*** Segments ***/
+                {
+                    type: 'addSolidSegmentWithClosedPoints',
+                    uiConnectedButtons: filter('addSolidSegmentWithClosedPoints'),
+                    linkedButtons: getGroup('segment', 'addSolidSegmentWithClosedPoints'),
+                    'inactive-is-default-state': false,
+                    group: 'segment'
+                },
+                {
+                    type: 'addSolidSegmentWithOpenPoints',
+                    uiConnectedButtons: filter('addSolidSegmentWithOpenPoints'),
+                    linkedButtons: getGroup('segment', 'addSolidSegmentWithOpenPoints'),
+                    'inactive-is-default-state': false,
+                    group: 'segment'
+                },
+                {
+                    type: 'addDashedSegmentWithClosedPoints',
+                    uiConnectedButtons: filter('addDashedSegmentWithClosedPoints'),
+                    linkedButtons: getGroup('segment', 'addDashedSegmentWithClosedPoints'),
+                    'inactive-is-default-state': false,
+                    group: 'segment'
+                },
+                {
+                    type: 'addDashedSegmentWithOpenPoints',
+                    uiConnectedButtons: filter('addDashedSegmentWithOpenPoints'),
+                    linkedButtons: getGroup('segment', 'addDashedSegmentWithOpenPoints'),
+                    'inactive-is-default-state': false,
+                    group: 'segment'
+                },
+                /*** Segments ***/
+
+                /*** Rays ***/
+                {
+                    type: 'addSolidRayWithClosedPoints',
+                    uiConnectedButtons: filter('addSolidRayWithClosedPoints'),
+                    linkedButtons: getGroup('ray', 'addSolidRayWithClosedPoints'),
+                    'inactive-is-default-state': false,
+                    group: 'ray'
+                },
+                {
+                    type: 'addSolidRayWithOpenPoints',
+                    uiConnectedButtons: filter('addSolidRayWithOpenPoints'),
+                    linkedButtons: getGroup('ray', 'addSolidRayWithOpenPoints'),
+                    'inactive-is-default-state': false,
+                    group: 'ray'
+                },
+                {
+                    type: 'addDashedRayWithClosedPoints',
+                    uiConnectedButtons: filter('addDashedRayWithClosedPoints'),
+                    linkedButtons: getGroup('ray', 'addDashedRayWithClosedPoints'),
+                    'inactive-is-default-state': false,
+                    group: 'ray'
+                },
+                {
+                    type: 'addDashedRayWithOpenPoints',
+                    uiConnectedButtons: filter('addDashedRayWithOpenPoints'),
+                    linkedButtons: getGroup('ray', 'addDashedRayWithOpenPoints'),
+                    'inactive-is-default-state': false,
+                    group: 'ray'
+                },
+                /*** Rays ***/
+
+                /*** Shape to grid ***/
+                {
+                    type: 'lineShadeToGrid',
+                    uiConnectedButtons: filter('lineShadeToGrid'),
+                    linkedButtons: ['lineShadeToGrid'],
+                    'inactive-is-default-state': true,
+                    group: 'line-snap-to-grid'
+                },
+                {
+                    type: 'lineRemoveShadeToGrid',
+                    uiConnectedButtons: filter('lineRemoveShadeToGrid'),
+                    linkedButtons: ['lineRemoveShadeToGrid'],
+                    'inactive-is-default-state': true,
+                    group: 'line-snap-to-grid'
+                },
+                /*** Shape to grid ***/
+
+                /*** Remove states ***/
+                {
+                    type: 'removeItem',
+                    uiConnectedButtons: [
+                        'lineShadeToGrid',
+                        'lineRemoveShadeToGrid'
+                    ],
+                    linkedButtons: [],
+                    'inactive-is-default-state': false,
+                    group: 'remove-item'
+                },
+                {
+                    type: 'reset',
+                    uiConnectedButtons: [
+                        'lineShadeToGrid',
+                        'lineRemoveShadeToGrid'
+                    ],
+                    linkedButtons: [],
+                    'inactive-is-default-state': true,
+                    group: 'reset'
+                }
+                /*** Remove states ***/
+            ];
+
+            Polymer({
+                is: 'graphing-tool-buttons-settings',
+
+                properties: {
+                    buttons: {
+                        type: Array,
+                        value: function() { return []; },
+                        notify: true
+                    },
+
+                    allowedButtons: {
+                        type: Object,
+                        value: function() { return {}; }
+                    }
+                },
+
+                observers: [
+                    'filterByAvailability(allowedButtons)'
+                ],
+
+                /**
+                 * @param {Object} allowedButtons
+                 */
+                filterByAvailability: function(allowedButtons) {
+                    this.buttons = buttons.filter(function(item) {
+                        return allowedButtons[item.type] === true;
+                    });
+                }
+            });
+        }());
+    </script>
+
+</dom-module>

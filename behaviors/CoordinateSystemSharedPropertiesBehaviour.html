@@ -1,0 +1,130 @@
+<link rel="import" href="../../../scripts/namespace.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.SharedProperties = {
+
+            properties: {
+                /**
+                 * @property is storing information about the lines dash factor
+                 * This property will affect at the lines, segments and rays
+                 */
+                lineDashFactor: {
+                    type: String,
+                    value: "0"
+                },
+
+                /**
+                 * @property is storing information about the
+                 * fill transparency of each point / circle
+                 */
+                pointsAreOpen: {
+                    type: Boolean,
+                    value: false
+                },
+
+                interactionSettings: {
+                    type: Object,
+                    value: {
+                        hoverIsEnable: false,
+                        linesHaveEndPoints: true,
+                        snapToGridIsEnable: true
+                    }
+                },
+
+                coordinateSystemDrawingTypes: {
+                    type: Object
+                },
+
+                coordinateSystemQtiAxisConfigurations: {
+                    type: Object
+                },
+
+                /**
+                 * @property will store session items
+                 */
+                containerTempObjects: {
+                    type: Object
+                },
+
+                /**
+                 * @property Store all system settings
+                 */
+                settings: {
+                    type: Object,
+                    value: {
+                        currentZoomLevel: 1,
+                        zoom: [1, 10],
+                        zoomIsActive: true,
+                        tempObjectsContainer: {
+                            defaultClassName: 'coordinate-system-temp-objects',
+                        },
+                        dots: {
+                            radius: 10,
+                            containerClassName: 'coordinate-system-circles',
+                            itemClassName: 'circle-draggable',
+                            maximumItems: 20
+                        },
+                        lines: {
+                            containerClassName: 'coordinate-system-lines',
+                            itemClassName: 'coordinate-system-line',
+                            maximumItems: 20
+                        },
+                        dotsWithLineConnection: {
+                            circle: {
+                                radius: 10,
+                                itemClassName: 'coordinate-system-segment-circle'
+                            },
+                            line: {
+                                itemClassName: 'coordinate-system-segment-line'
+                            },
+                            containerClassName: 'coordinate-system-circles-line-connection',
+                            maximumItems: 20
+                        },
+                        rays: {
+                            circle: {
+                                radius: 10,
+                                itemClassName: 'coordinate-system-ray-circle'
+                            },
+                            line: {
+                                itemClassName: 'coordinate-system-ray-line'
+                            },
+                            containerClassName: 'coordinate-system-ray',
+                            maximumItems: 20
+                        }
+                    }
+                },
+
+                /**
+                 * @property store information about backend items
+                 */
+                coordinateResponseData: {
+                    type: Object,
+                    value: function() { return this.getCoordinateResponseDataItems(); }
+                },
+            },
+
+            getCoordinateResponseDataItems: function() {
+                return {
+                    // Points
+                    dots: [],
+
+                    // Lines
+                    lines: [],
+
+                    // Dots with line connection (or just segments)
+                    segmentsDots: [],
+                    segmentsLines: [],
+
+                    // Rays
+                    raysDots: [],
+                    raysLines: [],
+
+                    triangleDots: []
+                };
+            }
+        }
+    });
+</script>

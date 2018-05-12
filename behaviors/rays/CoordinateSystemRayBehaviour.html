@@ -1,0 +1,430 @@
+<link rel="import" href="../../../../scripts/namespace.html">
+
+<!-- d3 plugins -->
+<link rel="import" href="../../plugins/d3-collections/d3-collections.html">
+<!-- d3 plugins -->
+
+<!--
+Shared properties:
+1. lineDashFactor
+2. pointsAreOpen
+-->
+<link rel="import" href="../CoordinateSystemSharedPropertiesBehaviour.html">
+<link rel="import" href="../CoordinateSystemRemoveItemBehaviour.html">
+<link rel="import" href="../CoordinateSystemToolbarBehaviour.html">
+
+<!--
+Shared properties
+1. rayContainer
+-->
+<link rel="import" href="CoordinateSystemRaySharedPropertiesBehavior.html">
+<link rel="import" href="CoordinateSystemRayStylesBehaviour.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Ray.Behaviors', function(namespace) {
+
+        namespace.Ray = [
+            App.Interactions.Graphs.CoordinateSystem.Behaviors.CoordinateSysteRemoveItem,
+            App.Interactions.Graphs.CoordinateSystem.Behaviors.SharedProperties,
+            App.Interactions.Graphs.CoordinateSystem.Behaviors.ToolBar,
+
+            App.Interactions.Graphs.CoordinateSystem.Ray.Behaviors.SharedProperties,
+            App.Interactions.Graphs.CoordinateSystem.Ray.Behaviors.Styles, {
+
+            properties: {
+
+                /**
+                 * @property Storing information about the latest added point to the
+                 * coordinate system
+                 */
+                tempRayDot: {
+                    type: Object,
+                    value: {
+                        x: null,
+                        y: null
+                    }
+                },
+            },
+
+            getRayMarkerType: function() {
+                return 'ray-normal-marker-end';
+            },
+
+            /***** INITIALIZERS *****/
+
+            initializeMathematicalRays: function() {
+                // Main container
+                this.initializerayContainer();
+
+                // Transform qti drawing settings to d3js configurations
+                this.transformQtiRaySettingsToD3Configurations();
+
+                // @see App.Interactions.Graphs.D3.GeometricFigures.Behaviors.Circle
+                this.convertQTIPointCoordinates(this.coordinateResponseData.raysDots);
+
+                // @see App.Interactions.Graphs.D3.GeometricFigures.Behaviors.Line
+                this.convertQTILineCoordinates(this.coordinateResponseData.raysLines);
+
+                this.addRaysToCoordinateSystem();
+
+                // Update toolbar state
+                this.__toggleToolbarRayButtons();
+            },
+
+            initializerayContainer: function() {
+                this.rayContainer = this.containerTempObjects
+                    .append('g')
+                    .attr('class', this.settings.rays.containerClassName);
+            },
+
+            /**
+             * @param {Object} coordinates attributes x and y
+             */
+            setTemRayDot: function(coordinates) {
+                this.tempRayDot.x = coordinates.x;
+                this.tempRayDot.y = coordinates.y;
+            },
+
+            /***** INITIALIZERS *****/
+
+
+            /***** RESET METHODS *****/
+
+            resetRayDot: function() {
+                this.tempRayDot = {
+                    x: null,
+                    y: null
+                };
+            },
+
+            /**
+             * Method is loading default state (if this is necessary)
+             */
+            loadRayDefaultStateIsNecessary: function() {
+                var dotsAreEmpty = this.coordinateResponseData.raysDots.length === 0;
+                var linesAreEmpty = this.coordinateResponseData.raysLines.length === 0;
+
+                if (dotsAreEmpty && linesAreEmpty) {
+                    this.resetRayDot();
+                }
+            },
+            /***** RESET METHODS *****/
+
+            tempRayDotIsEmpty: function() {
+                // If the student is clear the sections we should to
+                // load a default state
+                // We load this state if only is necessary
+                this.loadRayDefaultStateIsNecessary();
+
+                if (this.tempRayDot.x === null && this.tempRayDot.y === null) {
+                    return true;
+                } else {
+                    return false;
+                }
+            },
+
+            /***** QTI  *****/
+
+            /**
+             * Method is overriding the d3js setting with qti configurations
+             */
+            transformQtiRaySettingsToD3Configurations: function() {
+                if (typeof this.coordinateSystemDrawingTypes === 'undefined' || !this.coordinateSystemDrawingTypes.hasOwnProperty('rays')) {
+                    return;
+                }
+
+                var settings = this.coordinateSystemDrawingTypes.rays;
+
+                // Update the maximumItemsPerPage
+                // @see App.Interactions.Graphs.D3.Behaviors.Base
+                this.settings.rays.maximumItems = this.updateD3VariableWithQtiVariable(
+                    settings.maximumItemsPerPage,
+                    this.settings.rays.maximumItems
+                );
+
+                // App.Interactions.Graphs.CoordinateSystem.Ray.Behaviors.Styles
+                this.updateRayStyles(settings.styles);
+            },
+
+            /***** QTI  *****/
+
+            /***** DRAWING *****/
+            /**
+             * Method is rewriting the necessary rays after undo or redo execution
+             */
+            reDrawRays: function() {
+                this.rayContainer
+                    .selectAll('*')
+                    .remove();
+
+                this.addRaysToCoordinateSystem();
+
+                // Update toolbar state
+                this.__toggleToolbarRayButtons();
+            },
+
+            addRaysToCoordinateSystem: function() {
+                this.d3.drawCollectionGroups(
+                    this.rayContainer,
+                    this.coordinateResponseData.raysDots,
+                    1
+                );
+
+                this.__attachCoordinateSystemRayGroupOnclickListener();
+
+                // @see App.Interactions.Graphs.D3.GeometricFigures.Behaviors.Circle
+                this.drawCirclesInGroups(
+                    this.rayContainer,
+                    this.coordinateResponseData.raysDots,
+                    {
+                        'className': this.settings.rays.circle.itemClassName,
+                        'r': this.settings.rays.circle.radius
+                    }
+                );
+
+                // @see App.Interactions.Graphs.D3.GeometricFigures.Behaviors.D3Line
+                this.drawLinesInGroups(
+                    this.rayContainer,
+                    this.coordinateResponseData.raysLines,
+                    {
+                        'class': this.settings.rays.line.itemClassName,
+                        'marker-end': 'url(#' + this.getRayMarkerType() + ')'
+                    }
+                );
+            },
+
+            /**
+             * Attach onclick listener for adding a mathematical ray
+             */
+            attachAddRayListener: function() {
+                var self = this;
+                this.svgContainer
+                    .on('click', function() {
+                        self.addRayToCoordinateSystem(this);
+                    });
+            },
+
+            /**
+             * 1. The student is adding a point to coordinate system
+             * 2. The second click the system is adding a line with end point
+             *
+             * @param {Object} currentElement
+             */
+            addRayToCoordinateSystem: function(currentElement) {
+                // App.Interactions.Graphs.CoordinateSystem.Ray.Behaviors.Styles
+                this.rollbackRaysNormalStyles(this.rayContainer.selectAll('g'));
+
+                if (this.__drawingRayIsEnable()) {
+                    if (this.tempRayDotIsEmpty()) {
+                        // Draw the ray started point
+                        this.drawRayBeginning(currentElement);
+                    } else {
+                        // Get information about the on tap coordinates
+                        this._onTapDefaultBehavior(currentElement);
+
+                        // Draw end ot the mathematical ray
+                        this.drawRayEnding();
+
+                        if (this.__drawingRayIsEnable()) {
+                            // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.BaseInteraction
+                            this.loadGraphButtonDefaultStyle();
+                        } else {
+                            // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.BaseInteraction
+                            this.setGroupGraphButtonsOnInactive();
+                        }
+                    }
+                } else {
+                    // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.BaseInteraction
+                    this.setGroupGraphButtonsOnInactive();
+                }
+            },
+
+            /**
+             * Draw the ray started point
+             *
+             * @param {Object} currentElement
+             */
+            drawRayBeginning: function(currentElement) {
+                // @see App.Interactions.Graphs.CoordinateSystem.Styles.Behaviors.Circle
+                var dot = this._onTapGenerateOpenOrClosedPoint(currentElement);
+
+                // @see App.Interactions.Graphs.D3.Behaviors.Corrections
+                dot = this._updateCoordinatesWithSnapToGridCorrection(
+                    dot,
+                    this.interactionSettings.snapToGridIsEnable
+                );
+                this.setTemRayDot(dot);
+
+                // Append a dot
+                this.push('coordinateResponseData.raysDots', dot);
+
+                this.d3.drawCollectionGroups(
+                    this.rayContainer,
+                    this.coordinateResponseData.raysDots,
+                    1
+                );
+
+                // @see App.Interactions.Graphs.D3.GeometricFigures.Behaviors.Circle
+                this.drawCirclesInGroups(
+                    this.rayContainer,
+                    this.coordinateResponseData.raysDots,
+                    {
+                        'className': this.settings.rays.circle.itemClassName,
+                        'r': this.settings.rays.circle.radius
+                    }
+                );
+
+                this.__attachCoordinateSystemRayGroupOnclickListener();
+            },
+
+            /**
+             * Method will draw line and end of the ray
+             */
+            drawRayEnding: function() {
+                // Draw a line
+                this.__drawRayLine();
+
+                // Reset the latest temp ray point
+                this.resetRayDot();
+            },
+
+            __drawRayLine: function() {
+                var line = this.__generateRayLineCoordinates();
+                line['stroke-dasharray'] = this.lineDashFactor;
+
+                // Append a line
+                this.push('coordinateResponseData.raysLines', line);
+
+                // @see App.Interactions.Graphs.D3.GeometricFigures.Behaviors.D3Line
+                this.drawLinesInGroups(
+                    this.rayContainer,
+                    this.coordinateResponseData.raysLines,
+                    {
+                        'class': this.settings.rays.line.itemClassName,
+                        'marker-end': 'url(#' + this.getRayMarkerType() + ')'
+                    }
+                );
+            },
+
+            /**
+             * @return coordinates keys are x1, y1, x2, y2
+             */
+            __generateRayLineCoordinates: function() {
+                // @see App.Interactions.Graphs.D3.Behaviors.Corrections
+                this.coordinates = this._updateCoordinatesWithSnapToGridCorrection(
+                    this.coordinates,
+                    this.interactionSettings.snapToGridIsEnable
+                );
+
+                var coordinates = {
+                    'x1': this.tempRayDot.x,
+                    'y1': this.tempRayDot.y,
+
+                    'x2': this.coordinates.x,
+                    'y2': this.coordinates.y
+                };
+
+                return coordinates;
+            },
+
+            /**
+             * @return {Boolean} hasEmptySlot
+             */
+            __drawingRayIsEnable: function() {
+                return this.d3.collectionHasEmptySlots(
+                    this.coordinateResponseData.raysLines,
+                    this.settings.rays.maximumItems
+                );
+            },
+
+            /***** DRAWING *****/
+
+            /***** Toolbar Buttons *****/
+
+            /**
+             * Method is getting an information about which toolbar group should be updated.
+             */
+            getRayToolbarGroupKey: function() {
+                return 'ray';
+            },
+
+            /**
+             * Method has an ability to disable or enable ray toolbar buttons
+             * If the studen has an ability to draw a ray -
+             * Toolbar buttons have status active otherwise inactive
+             */
+            __toggleToolbarRayButtons: function() {
+                var state;
+                if (this.__drawingRayIsEnable()) {
+                    state = 'default';
+                } else {
+                    state = 'inactive';
+                }
+
+                // App.Interactions.Graphs.CoordinateSystem.Behaviors.ToolBar
+                this.updateLinkedButtonsByGroupName(
+                    this.getRayToolbarGroupKey(),
+                    state
+                );
+            },
+
+            /***** Toolbar Buttons *****/
+
+            /***** Listeners *****/
+
+            /* Onclick */
+            __attachCoordinateSystemRayGroupOnclickListener: function() {
+                var self = this;
+                this.rayContainer
+                    .selectAll('g')
+                        .on('click', function(d, i) {
+                            if (self.interactionState !== self.getRemoveItemState()) {
+                                // App.Interactions.Graphs.CoordinateSystem.Ray.Behaviors.Styles
+                                // self.toggleRayState(self.d3.select(this));
+                            } else {
+                                self.__removeRayByGroupItem(self.d3.select(this));
+                            }
+                        });
+            },
+            /* Onclick */
+
+            /***** Listeners *****/
+
+            /***** Remove State ****/
+
+            /**
+             * @param {D3Object} group
+             */
+            __removeRayByGroupItem: function(group) {
+                var line = group.selectAll('line');
+                var circle = group.selectAll('circle');
+
+                if (!line.empty() && !circle.empty()) {
+                    group.remove();
+
+                    // Remove the backend circle
+                    // App.Interactions.Graphs.CoordinateSystem.Behaviors.CoordinateSysteRemoveItem
+                    this.coordinateResponseData.raysDots =
+                        this.removeBackendItem(circle, this.coordinateResponseData.raysDots);
+                    this.notifyPath('coordinateResponseData.raysDots');
+
+                    // Remove the line
+                    // App.Interactions.Graphs.CoordinateSystem.Behaviors.CoordinateSysteRemoveItem
+                    this.coordinateResponseData.raysLines =
+                        this.removeBackendItem(line, this.coordinateResponseData.raysLines);
+                    this.notifyPath('coordinateResponseData.raysLines');
+
+                    // Reset the latest temp ray point
+                    this.resetRayDot();
+
+                    // Turn on if this necessary is ray graph buttons
+                    this.__toggleToolbarRayButtons();
+                }
+
+                // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.BaseInteraction
+                this.loadGraphButtonDefaultStyle();
+            },
+            /***** Remove State ****/
+        }]
+    });
+</script>

@@ -1,0 +1,376 @@
+<link rel="import" href="../../../../scripts/namespace.html">
+
+<!-- d3 plugins -->
+<link rel="import" href="../../plugins/d3-collections/d3-collections.html">
+<!-- d3 plugins -->
+
+<!--
+Shared properties:
+1. lineDashFactor
+2. pointsAreOpen
+-->
+<link rel="import" href="../CoordinateSystemSharedPropertiesBehaviour.html">
+<link rel="import" href="../CoordinateSystemRemoveItemBehaviour.html">
+<link rel="import" href="../CoordinateSystemToolbarBehaviour.html">
+
+<!--
+Shared properties
+1. this.containerDotsWithLineConnection
+-->
+<link rel="import" href="CoordinateSystemSegmentSharedPropertiesBehavior.html">
+<link rel="import" href="CoordinateSystemSegmentGroupsBehavior.html">
+
+<script>
+
+    namespace('App.Interactions.Graphs.CoordinateSystem.Segment.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.Segment = [
+
+            App.Interactions.Graphs.CoordinateSystem.Behaviors.CoordinateSysteRemoveItem,
+            App.Interactions.Graphs.CoordinateSystem.Behaviors.SharedProperties,
+            App.Interactions.Graphs.CoordinateSystem.Behaviors.ToolBar,
+
+            App.Interactions.Graphs.CoordinateSystem.Segment.Behaviors.Groups,
+            App.Interactions.Graphs.CoordinateSystem.Segment.Behaviors.SharedProperties, {
+
+            properties: {
+
+                /**
+                 * @property store coordinates of each point
+                 * This coordinates will be using for drawing a line.
+                 */
+                tempDotsConnectionLine: {
+                    type: Object,
+                    value: {
+                        x1: null,
+                        x2: null,
+                        y1: null,
+                        y2: null
+                    }
+                },
+            },
+
+            /***** INITIALIZERS *****/
+            initializeContainerDotsWithConnection: function() {
+                // Main container
+                this.initializeSegmentMainContainer();
+
+                // Transform qti drawing settings to d3js configurations
+                this.transformQtiSegmentSettingsToD3Configurations();
+
+                // @see App.Interactions.Graphs.D3.GeometricFigures.Behaviors.Circle
+                this.convertQTIPointCoordinates(this.coordinateResponseData.segmentsDots);
+
+                // @see App.Interactions.Graphs.D3.GeometricFigures.Behaviors.Line
+                this.convertQTILineCoordinates(this.coordinateResponseData.segmentsLines);
+
+                this.addSegmentsToCoordinateSystem();
+
+                // Update toolbar state
+                this.__toggleToolbarSegmentButtons();
+            },
+
+            initializeSegmentMainContainer: function() {
+                // Main container
+                this.containerDotsWithLineConnection = this.containerTempObjects
+                    .append('g')
+                    .attr('class', this.settings.dotsWithLineConnection.containerClassName);
+            },
+            /***** INITIALIZERS *****/
+
+            /***** QTI *****/
+
+            /**
+             * Method is overriding the d3js setting with qti configurations
+             */
+            transformQtiSegmentSettingsToD3Configurations: function() {
+                if (typeof this.coordinateSystemDrawingTypes === 'undefined' || !this.coordinateSystemDrawingTypes.hasOwnProperty('segments')) {
+                    return;
+                }
+
+                var settings = this.coordinateSystemDrawingTypes.segments;
+
+                // Update the maximumItemsPerPage
+                // @see App.Interactions.Graphs.D3.Behaviors.Base
+                this.settings.dotsWithLineConnection.maximumItems = this.updateD3VariableWithQtiVariable(
+                    settings.maximumItemsPerPage,
+                    this.settings.dotsWithLineConnection.maximumItems
+                );
+
+                // App.Interactions.Graphs.CoordinateSystem.Segment.Behaviors.Styles
+                this.updateSegmentStyles(settings.styles);
+            },
+            /***** QTI *****/
+
+            /***** DRAWING *****/
+            /**
+             * Method is rewriting the necessary segments after undo or redo execution
+             */
+            reDrawSegments: function() {
+                this.containerDotsWithLineConnection
+                    .selectAll('*')
+                    .remove();
+
+                this.addSegmentsToCoordinateSystem();
+
+                // Update toolbar state
+                this.__toggleToolbarSegmentButtons();
+            },
+
+            addSegmentsToCoordinateSystem: function() {
+                // App.Interactions.Graphs.CoordinateSystem.Segment.Behaviors.Groups
+                this.createGroupsBySegmentsDots(this.coordinateResponseData.segmentsDots);
+                this.__attachCoordinateSystemSegmentGroupOnclickListener();
+
+                // @see App.Interactions.Graphs.CoordinateSystem.Segment.Behaviors.Groups
+                this.drawSegmentCirclesInGroups(
+                    this.containerDotsWithLineConnection,
+                    this.coordinateResponseData.segmentsDots,
+                    {
+                        'className': this.settings.dotsWithLineConnection.circle.itemClassName,
+                        'r': this.settings.dotsWithLineConnection.circle.radius
+                    }
+                );
+
+                // @see App.Interactions.Graphs.D3.GeometricFigures.Behaviors.D3Line
+                this.drawLinesInGroups(
+                    this.containerDotsWithLineConnection,
+                    this.coordinateResponseData.segmentsLines,
+                    {
+                        'class': this.settings.dotsWithLineConnection.line.itemClassName
+                    }
+                );
+            },
+
+            /**
+             * Attach onlick listener for adding a points with line connection
+             * option
+             */
+            attachAddPointWithLineConnectionListener: function() {
+                var self = this;
+                this.svgContainer
+                    .on('click', function() {
+                        self.addPointToCoordinateSystemWithLineConnection(this);
+                    });
+            },
+
+            /**
+             * Add point and if started point is set created a connection between start and end points.
+             *
+             * @param {Object} currentElement
+             *
+             * @see http://bl.ocks.org/hlucasfranca/f133da4493553963e710
+             * @see http://stackoverflow.com/questions/15147136/how-to-know-the-current-zoom-level-in-d3-js
+             */
+            addPointToCoordinateSystemWithLineConnection: function(currentElement) {
+                // App.Interactions.Graphs.CoordinateSystem.Ray.Behaviors.Styles
+                this.rollbackSegmentsNormalStyles(this.containerDotsWithLineConnection.selectAll('g'));
+
+                if (this.__drawingSegmentIsEnable()) {
+                    // @see App.Interactions.Graphs.CoordinateSystem.Styles.Behaviors.Circle
+                    var dot = this._onTapGenerateOpenOrClosedPoint(currentElement);
+
+                    // @see App.Interactions.Graphs.D3.Behaviors.Corrections
+                    dot = this._updateCoordinatesWithSnapToGridCorrection(
+                        dot,
+                        this.interactionSettings.snapToGridIsEnable
+                    );
+
+                    // Append a dot
+                    this.push('coordinateResponseData.segmentsDots', dot);
+
+                    // App.Interactions.Graphs.CoordinateSystem.Segment.Behaviors.Groups
+                    this.createGroupsBySegmentsDots(this.coordinateResponseData.segmentsDots);
+                    this.__attachCoordinateSystemSegmentGroupOnclickListener();
+
+                    // App.Interactions.Graphs.CoordinateSystem.Segment.Behaviors.Groups
+                    this.drawSegmentCirclesInGroups(
+                        this.containerDotsWithLineConnection,
+                        this.coordinateResponseData.segmentsDots,
+                        {
+                            'className': this.settings.dotsWithLineConnection.circle.itemClassName,
+                            'r': this.settings.dotsWithLineConnection.circle.radius
+                        }
+                    );
+
+                    // Update the line information
+                    this.__updateLineSegmentCoordinates();
+                } else {
+                    // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.BaseInteraction
+                    this.setGroupGraphButtonsOnInactive();
+                }
+            },
+
+            /**
+             * First time will update coordinates
+             * Second time update coordinates and we will draw line.
+             */
+            __updateLineSegmentCoordinates: function() {
+                // @see App.Interactions.Graphs.D3.Behaviors.Corrections
+                this.coordinates = this._updateCoordinatesWithSnapToGridCorrection(
+                    this.coordinates,
+                    this.interactionSettings.snapToGridIsEnable
+                );
+
+                if (this.coordinateResponseData.segmentsDots.length % 2 === 0) {
+                    this.tempDotsConnectionLine.x2 = this.coordinates.x;
+                    this.tempDotsConnectionLine.y2 = this.coordinates.y;
+
+                    this.__drawSegmentLine();
+
+                    if (this.__drawingSegmentIsEnable()) {
+                        // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.BaseInteraction
+                        this.loadGraphButtonDefaultStyle();
+                    } else {
+                        // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.BaseInteraction
+                        this.setGroupGraphButtonsOnInactive();
+                    }
+
+                } else {
+                    this.tempDotsConnectionLine.x1 = this.coordinates.x;
+                    this.tempDotsConnectionLine.y1 = this.coordinates.y;
+                }
+            },
+
+            /**
+             * Drawing connected line.
+             */
+            __drawSegmentLine: function() {
+                var line = this.tempDotsConnectionLine;
+                line['stroke-dasharray'] = this.lineDashFactor;
+
+                // Append a line
+                this.push('coordinateResponseData.segmentsLines', line);
+
+                // @see App.Interactions.Graphs.D3.GeometricFigures.Behaviors.D3Line
+                this.drawLinesInGroups(
+                    this.containerDotsWithLineConnection,
+                    this.coordinateResponseData.segmentsLines,
+                    {
+                        'class': this.settings.dotsWithLineConnection.line.itemClassName
+                    }
+                );
+
+                this.__resetSegmentLine();
+            },
+
+            /**
+             * Connection is added between first and second point and after
+             * method destroys / reset information about the temp line.
+             */
+            __resetSegmentLine: function() {
+                this.tempDotsConnectionLine = {
+                    x1: null,
+                    x2: null,
+                    y1: null,
+                    y2: null
+                };
+            },
+
+            /**
+             * @return {Boolean} hasEmptySlot
+             */
+            __drawingSegmentIsEnable: function() {
+                return this.d3.collectionHasEmptySlots(
+                    this.coordinateResponseData.segmentsLines,
+                    this.settings.dotsWithLineConnection.maximumItems
+                );
+            },
+            /***** DRAWING *****/
+
+            /***** Toolbar Buttons *****/
+
+            /**
+             * Method is getting an information about which toolbar group should be updated.
+             */
+            getSegmentToolbarGroupKey: function() {
+                return 'segment';
+            },
+
+            /**
+             * Method has an ability to disable or enable segment toolbar buttons
+             * If the studen has an ability to draw a segment -
+             * Toolbar buttons have status active otherwise inactive
+             */
+            __toggleToolbarSegmentButtons: function() {
+                var state;
+                if (this.__drawingSegmentIsEnable()) {
+                    state = 'default';
+                } else {
+                    state = 'inactive';
+                }
+
+                // App.Interactions.Graphs.CoordinateSystem.Behaviors.ToolBar
+                this.updateLinkedButtonsByGroupName(
+                    this.getSegmentToolbarGroupKey(),
+                    state
+                );
+            },
+
+            /***** Toolbar Buttons *****/
+
+            /***** Listeners *****/
+
+            /* Onclick */
+            __attachCoordinateSystemSegmentGroupOnclickListener: function() {
+                var self = this;
+                this.containerDotsWithLineConnection
+                    .selectAll('g')
+                        .on('click', function(d, i) {
+                            if (self.interactionState !== self.getRemoveItemState()) {
+                                // App.Interactions.Graphs.CoordinateSystem.Segment.Behaviors.Styles
+                                // self.toggleSegmentState(self.d3.select(this));
+                            } else {
+                                self.__removeSegmentByGroupItem(self.d3.select(this));
+                            }
+                        });
+            },
+            /* Onclick */
+
+            /***** Listeners *****/
+
+            /***** Remove State ****/
+
+            /**
+             * @param {D3Object} group
+             */
+            __removeSegmentByGroupItem: function(group) {
+                var line = group.selectAll('line');
+                var circles = group.selectAll('circle');
+
+                if (!line.empty() && !circles.empty()) {
+                    group.remove();
+
+                    // Remove the backend circles / points
+                    var self = this;
+                    circles.each(function() {
+                        // Remove the backend circle
+                        // App.Interactions.Graphs.CoordinateSystem.Behaviors.CoordinateSysteRemoveItem
+                        self.coordinateResponseData.segmentsDots = self.removeBackendItem(
+                            self.d3.select(this),
+                            self.coordinateResponseData.segmentsDots
+                        );
+                    });
+                    this.notifyPath('coordinateResponseData.segmentsDots');
+
+                    // Remove the backend line
+                    // App.Interactions.Graphs.CoordinateSystem.Behaviors.CoordinateSysteRemoveItem
+                    this.coordinateResponseData.segmentsLines =
+                        this.removeBackendItem(line, this.coordinateResponseData.segmentsLines);
+                    this.notifyPath('coordinateResponseData.segmentsLines');
+
+                    // Reset the latest temp segment line
+                    this.__resetSegmentLine();
+
+                    // Turn on if this is necessary segment graph buttons
+                    this.__toggleToolbarSegmentButtons();
+                }
+
+                // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.BaseInteraction
+                this.loadGraphButtonDefaultStyle();
+            },
+            /***** Indexes ****/
+        }]
+    });
+</script>

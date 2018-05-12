@@ -1,0 +1,344 @@
+<link rel="import" href="../../../../scripts/namespace.html">
+
+<link rel="import" href="../CoordinateSystemToolbarBehaviour.html">
+
+<link rel="import" href="circles/CoordinateSystemPointInteractionBehaviour.html">
+<link rel="import" href="lines/CoordinateSystemLinesInteractionBehaviour.html">
+<link rel="import" href="lines/CoordinateSystemShadeToGridInteractionBehaviour.html">
+<link rel="import" href="rays/CoordinateSystemRayInteractionBehaviour.html">
+<link rel="import" href="segments/CoordinateSystemSegmentsInteractionBehaviour.html">
+
+<!-- Draggable -->
+<link rel="import" href="../circles/CoordinateSystemCircleDragBehavior.html">
+<link rel="import" href="../lines/CoordinateSystemLineDragBehavior.html">
+<link rel="import" href="../rays/CoordinateSystemRayCirclesDragBehavior.html">
+<link rel="import" href="../segments/CoordinateSystemSegmentCirclesDragBehavior.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.BaseInteraction = [
+            App.Interactions.Graphs.CoordinateSystem.Behaviors.ToolBar,
+
+            App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.PointInteraction,
+
+            App.Interactions.Graphs.CoordinateSystem.Lines.InteractionStates.Behaviors.LineInteraction,
+            App.Interactions.Graphs.CoordinateSystem.Lines.InteractionStates.Behaviors.ShadeToGrid,
+
+            App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.RayInteraction,
+            App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.SegmentInteraction,
+
+            /*** Points / Circles ***/
+            App.Interactions.Graphs.CoordinateSystem.Circle.Behaviors.Drag,
+
+            /*** Lines ***/
+            App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.Drag,
+
+            /*** Rays ***/
+            App.Interactions.Graphs.CoordinateSystem.Ray.Behaviors.DragCircle,
+
+            /***  Segments ***/
+            App.Interactions.Graphs.CoordinateSystem.Segment.Behaviors.DragCircle, {
+
+            properties: {
+                interactionState: {
+                    type: String,
+                    value: null
+                },
+            },
+
+            getInteractionState: function() {
+                return this.interactionState;
+            },
+
+            /**
+             * Update coordinate system active interaction
+             */
+            setInteractionState: function(state) {
+                if (state === this.interactionState) {
+                    this.setDefaultState();
+
+                    // App.Interactions.Graphs.CoordinateSystem.Behaviors.ToolBar
+                    this.enableUiConnectedButtons(state);
+
+                    return;
+                } else {
+                    // App.Interactions.Graphs.CoordinateSystem.Behaviors.ToolBar
+                    this.disabledUiConnectedButtons(state);
+                }
+
+                switch (state) {
+                    case 'reset':
+                        this.setResetInteractionState();
+                        break;
+
+                    /*** Points ***/
+
+                    // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.PointInteraction
+                    case 'addOpenPoint':
+                        this.setAddOpenPointInteractionState();
+                        break;
+
+                    // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.PointInteraction
+                    case 'addClosedPoint':
+                        this.setAddClosedPointInteractionState();
+                        break;
+
+                    /*** Points ***/
+
+                    /*** Lines ***/
+
+                    // App.Interactions.Graphs.CoordinateSystem.Lines.InteractionStates.Behaviors.LineInteraction
+                    case 'addSolidLine':
+                        this.setSolidLineInteractionState();
+                        break;
+
+                    // App.Interactions.Graphs.CoordinateSystem.Lines.InteractionStates.Behaviors.LineInteraction
+                    case 'addDashedLine':
+                        this.setDashedLineInteractionState();
+                        break;
+
+                    // App.Interactions.Graphs.CoordinateSystem.Lines.InteractionStates.Behaviors.ShadeToGrid
+                    case 'lineShadeToGrid':
+                        this.setLineShadeToGridState();
+                        break;
+
+                    // App.Interactions.Graphs.CoordinateSystem.Lines.InteractionStates.Behaviors.ShadeToGrid
+                    case 'lineRemoveShadeToGrid':
+                        this.setLineRemoveShadeToGridState();
+                        break;
+                    /*** Lines ***/
+
+                    /*** Segments ***/
+                    // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.SegmentInteraction
+                    case 'addSolidSegmentWithClosedPoints':
+                        this.setSolidSegmentWithClosedPointsInteractionState();
+                        break;
+
+                    // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.SegmentInteraction
+                    case 'addSolidSegmentWithOpenPoints':
+                        this.setSolidSegmentWithOpenPointsInteractionState();
+                        break;
+
+                    // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.SegmentInteraction
+                    case 'addDashedSegmentWithClosedPoints':
+                        this.setDashedSegmentWithClosedPointsInteractionState();
+                        break;
+
+                    // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.SegmentInteraction
+                    case 'addDashedSegmentWithOpenPoints':
+                        this.setDashedSegmentWithOpenPointsInteractionState();
+                        break;
+                    /*** Segments ***/
+
+                    /*** Rays ***/
+                    // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.RayInteraction
+                    case 'addSolidRayWithClosedPoints':
+                        this.setSolidRayWithClosedPointsInteractionState();
+                        break;
+
+                    // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.RayInteraction
+                    case 'addSolidRayWithOpenPoints':
+                        this.setSolidRayWithOpenPointsInteractionState();
+                        break;
+
+                    // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.RayInteraction
+                    case 'addDashedRayWithClosedPoints':
+                        this.setDashedRayWithClosedPointsInteractionState();
+                        break;
+
+                    // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.RayInteraction
+                    case 'addDashedRayWithOpenPoints':
+                        this.setDashedRayWithOpenPointsInteractionState();
+                        break;
+                    /*** Rays ***/
+
+                    case 'removeItem':
+                        this.removeItemInteractionState();
+                        break;
+
+                    case 'undo':
+                        this.interactionState = this.getUndoState();
+
+                        this.loadHistoryManagerState();
+                        break;
+
+                    case 'redo':
+                        this.interactionState = this.getRedoState();
+
+                        this.loadHistoryManagerState();
+                        break;
+
+                    default:
+                        // Load default state
+                        this.setDefaultState();
+
+                        break;
+                }
+
+                // Update Styles
+                this.updateClassNames();
+            },
+
+            getDefaultState: function() {
+                return 'default';
+            },
+
+            getRemoveItemState: function() {
+                return 'removeItem';
+            },
+
+            getUndoState: function() {
+                return 'undo';
+            },
+
+            getRedoState: function() {
+                return 'redo';
+            },
+
+            /**
+             * State: Default
+             */
+            setDefaultState: function() {
+                if (this.interactionState === this.getDefaultState()) {
+                    return;
+                }
+
+                // Destroy all event listeners
+                this.destroyCoordinateSystemListeners();
+
+                // Zoom is activated.
+                this.settings.zoomIsActive = true;
+
+                this.interactionState = this.getDefaultState();
+
+                this.__attachDraggableBehaviors();
+            },
+
+            /**
+             * State: Reset
+             */
+            setResetInteractionState: function() {
+                // @see App.Interactions.Graphs.CoordinateSystem.Behaviors.CoordinateSystem
+                this.destroyTempItems();
+
+                // Load default state
+                this.setDefaultState();
+            },
+
+            /**
+             * State: removeItem
+             */
+            removeItemInteractionState: function() {
+                // Destroy all event listeners
+                this.destroyCoordinateSystemListeners();
+
+                // The user is able to add points and zoom is disabled.
+                this.interactionState = this.getRemoveItemState();
+            },
+
+            /**
+             * State: undo | redo
+             */
+            loadHistoryManagerState: function() {
+                // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.PointInteraction
+                this.callPointsHistoryState();
+
+                // App.Interactions.Graphs.CoordinateSystem.Lines.InteractionStates.Behaviors.LineInteraction
+                this.callLinesHistoryState();
+
+                // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.RayInteraction
+                this.callRaysHistoryState();
+
+                // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.SegmentInteraction
+                this.callSegmentsHistoryState();
+
+                // Load default state
+                this.setDefaultState();
+            },
+
+             /**
+              * Back coordinate system to default state
+              */
+            destroyCoordinateSystemListeners: function() {
+                this.detachClickListeners();
+                this.detachMouseDrawingListeners();
+
+                // App.Interactions.Graphs.CoordinateSystem.Circle.Behaviors.Drag
+                this.detachCircleDraggleBehavior();
+
+                // App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.Drag
+                this.detachLineDraggableBehavior();
+
+                // App.Interactions.Graphs.CoordinateSystem.Ray.Behaviors.DragCircle
+                this.detachCircleRaysDraggableBehavior();
+
+                // App.Interactions.Graphs.CoordinateSystem.Segment.Behaviors.DragCircle
+                this.detachCircleSegmentsDraggableBehavior();
+            },
+
+            loadGraphButtonDefaultStyle: function() {
+                // App.Interactions.Graphs.CoordinateSystem.Behaviors.ToolBar
+                this.loadGraphButtonDefaultStateByName(this.interactionState);
+
+                // App.Interactions.Graphs.CoordinateSystem.Behaviors.ToolBar
+                this.enableUiConnectedButtons(this.interactionState);
+
+                // Load default state
+                this.setDefaultState();
+            },
+
+            setGraphButtOnInactive: function () {
+                // App.Interactions.Graphs.CoordinateSystem.Behaviors.ToolBar
+                this.loadGraphButtonInactiveStateByName(this.interactionState);
+
+                // App.Interactions.Graphs.CoordinateSystem.Behaviors.ToolBar
+                this.enableUiConnectedButtons(this.interactionState);
+
+                // Load default state
+                this.setDefaultState();
+            },
+
+            setGroupGraphButtonsOnInactive: function() {
+                // App.Interactions.Graphs.CoordinateSystem.Behaviors.ToolBar
+                this.inactiveLinkedButtons(this.interactionState);
+
+                // App.Interactions.Graphs.CoordinateSystem.Behaviors.ToolBar
+                this.enableUiConnectedButtons(this.interactionState);
+
+                // Load default state
+                this.setDefaultState();
+            },
+
+            getActiveGraphButton: function() {
+                if (this.graphButtons.hasOwnProperty(this.interactionState)) {
+                    return this.graphButtons[this.interactionState];
+                }
+
+                return null;
+            },
+
+            /**
+             * Method is adding the draggable behavior for all drawing types
+             */
+            __attachDraggableBehaviors: function() {
+                // App.Interactions.Graphs.CoordinateSystem.Circle.Behaviors.Drag
+                // Drawing type point has a draggable behavior
+                this.attachCircleDraggleBehavior();
+
+                // Drawing type line has a draggable behavior
+                // App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.Drag
+                this.attachDraggableBehavior();
+
+                // Drawing type ray has a draggable behavior
+                // App.Interactions.Graphs.CoordinateSystem.Ray.Behaviors.DragCircle
+                this.attachCircleRaysDraggableBehavior();
+
+                // Drawing type segment has a draggable behavior
+                // App.Interactions.Graphs.CoordinateSystem.Segment.Behaviors.DragCircle
+                this.attachCircleSegmentsDraggableBehavior();
+            }
+        }]
+    });
+</script>

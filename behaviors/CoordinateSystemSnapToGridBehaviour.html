@@ -1,0 +1,82 @@
+<!--
+`App.Interactions.Graphs.CoordinateSystem.Behaviors.SnapToGrid` is caring about
+the snap to grid elements - circle and line
+Snap to grid update the backend data 
+-->
+
+<link rel="import" href="../../../scripts/namespace.html">
+
+<link rel="import" href="../../behaviors/graphing-interactions/D3CorrectionsBehaviour.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.SnapToGrid = [
+            App.Interactions.Graphs.D3.Behaviors.Corrections, {
+
+            /**
+             * @param {D3Object} line
+             */
+             snapToGridRayLine: function(line) {
+                 var data = line.datum();
+
+                 // App.Interactions.Graphs.D3.Behaviors.Corrections
+                 var startingPoint = this._updateCoordinatesWithSnapToGridCorrection(
+                     {
+                         x: data.x1,
+                         y: data.y1
+                     },
+                     true
+                 );
+
+                 // App.Interactions.Graphs.D3.Behaviors.Corrections
+                 var endPoint = this._updateCoordinatesWithSnapToGridCorrection(
+                     {
+                         x: data.x2,
+                         y: data.y2
+                     },
+                     true
+                 );
+
+                 line
+                     .attr('x1', function(d) {
+                         return d.x1 = startingPoint.x;
+                     })
+                     .attr('y1', function(d) {
+                         return d.y1 = startingPoint.y;
+                     })
+                     .attr('x2', function(d) {
+                         return d.x2 = endPoint.x;
+                     })
+                     .attr('y2', function(d) {
+                         return d.y2 = endPoint.y;
+                     });
+             },
+
+             /**
+             * @param {D3Object} circle
+             */
+            snapToGridCircle: function(circle) {
+                var data = circle.datum();
+
+                // App.Interactions.Graphs.D3.Behaviors.Corrections
+                var coordinates = this._updateCoordinatesWithSnapToGridCorrection(
+                    {
+                        x: data.x,
+                        y: data.y
+                    },
+                    true
+                );
+
+                circle
+                    .attr('cx', function(d) {
+                        return d.x = coordinates.x;
+                    })
+                    .attr('cy', function(d) {
+                        return d.y = coordinates.y;
+                    });
+            }
+        }];
+    });
+</script>

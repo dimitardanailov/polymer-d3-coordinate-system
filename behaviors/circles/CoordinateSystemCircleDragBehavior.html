@@ -1,0 +1,124 @@
+<!--
+`App.Interactions.Graphs.CoordinateSystem.Circle.Behaviors.Drag` is caring about
+the drag and drop drawing circle type.
+-->
+
+<link rel="import" href="../../../../scripts/namespace.html">
+
+<link rel="import" href="../CoordinateSystemSnapToGridBehaviour.html">
+
+<!--
+Shared properties:
+1. containerDots
+-->
+<link rel="import" href="CoordinateSystemCircleSharedPropertiesBehavior.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Circle.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.Drag = [
+            App.Interactions.Graphs.CoordinateSystem.Behaviors.SnapToGrid,
+
+            App.Interactions.Graphs.CoordinateSystem.Circle.Behaviors.SharedProperties, {
+
+            /*** Constants ***/
+            getCircleDraggingClassName: function() {
+                return 'circle-dragging';
+            },
+            /*** Constants ***/
+
+            /**
+             * @see https://bl.ocks.org/mbostock/6123708
+             * @see http://bl.ocks.org/hlucasfranca/f133da4493553963e710
+             */
+            attachCircleDraggleBehavior: function() {
+                var drag = this.__getCircleDragBehavior();
+
+                this.containerDots
+                    .selectAll('circle')
+                    .call(drag);
+            },
+
+            detachCircleDraggleBehavior: function() {
+                this.containerDots
+                    .selectAll('circle')
+                        .on('mousedown.drag', null);
+            },
+
+            /**
+             * @see https://bl.ocks.org/mbostock/6123708
+             * @see http://bl.ocks.org/sgruhier/1d692762f8328a2c9957
+             * @see https://github.com/d3/d3/blob/master/API.md#dragging-d3-drag
+             * @see http://bl.ocks.org/mbostock/1557377
+             */
+            __getCircleDragBehavior: function() {
+                var self = this;
+
+                var drag = this.d3.behavior.drag()
+                    .origin(function(event) { return event; })
+                    .on('dragstart', function() {
+                        self.__circleDragstarted(this);
+                    })
+                    .on('drag', function(d) {
+                        self.__circleDragged(d, this);
+                    })
+                    .on('dragend', function() {
+                        self.__circleDragended(this);
+                    });
+
+                return drag;
+            },
+
+            /**
+             * @see https://bl.ocks.org/mbostock/6123708
+             *
+             * @param {Object} currentElement
+             */
+            __circleDragstarted: function(currentElement) {
+                // silence other listeners
+                this.d3.event.sourceEvent.stopPropagation();
+
+                this.d3.select(currentElement)
+                    .classed(this.getCircleDraggingClassName(), true);
+            },
+
+            /**
+             * @see https://bl.ocks.org/mbostock/6123708
+             * @see https://jsfiddle.net/3k2u8buk/
+             *
+             * @param {D3EventListenerIntance} d
+             * @param {D3Instance} currentElement
+             */
+            __circleDragged: function(d, currentElement) {
+                d.x += (this.d3.event.dx / this.externalZoom);
+                d.y += (this.d3.event.dy / this.externalZoom);
+
+                this.d3.select(currentElement)
+                    .attr('cx', d.x)
+                    .attr('cy', d.y);
+            },
+
+            /**
+             * @see https://bl.ocks.org/mbostock/6123708
+             *
+             * @param {Object} event
+             * @param {Object} currentElement
+             */
+            __circleDragended: function(currentElement) {
+                // silence other listeners
+                this.d3.event.sourceEvent.stopPropagation();
+
+                var circle = this.d3.select(currentElement);
+                circle.classed(this.getCircleDraggingClassName(), false);
+                if (this.interactionSettings.snapToGridIsEnable) {
+                    // App.Interactions.Graphs.CoordinateSystem.Behaviors.SnapToGrid
+                    this.snapToGridCircle(circle);
+                }
+
+                this.notifyPath('coordinateResponseData.dots',
+                    this.coordinateResponseData.dots.map(function(d) { return d }));
+           },
+        }];
+    });
+</script>

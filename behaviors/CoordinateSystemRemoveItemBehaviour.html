@@ -1,0 +1,50 @@
+<link rel="import" href="../../../scripts/namespace.html">
+
+<link rel="import" href="../../../behaviors/collections/ObjectBehavior.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.CoordinateSysteRemoveItem = [
+            App.Collections.Behaviors.Object, {
+
+            /**
+             * @param {Object} item
+             */
+            removeD3Item: function(item) {
+                item.remove();
+
+                this.__removeItemSharedBehavior();
+            },
+
+            /**
+             * @param {D3Object} item
+             * @param {Array} collection
+             */
+            removeBackendItem: function(item, collection) {
+                var data = item.datum();
+
+                var self = this;
+                return collection.filter(function(d) {
+                    return (!self.objectsAreEqual(d, data));
+                });
+            },
+
+            __removeItemSharedBehavior: function() {
+                // remove temp hover items
+                this.__removeHoverItems();
+
+                // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.BaseInteraction
+                this.loadGraphButtonDefaultStyle();
+            },
+
+            __removeHoverItems: function() {
+                // Text hover items
+                this.containerTempObjects
+                    .selectAll('.' + this.mouseOverCircleSettings.text.className)
+                    .remove();
+            },
+        }];
+    });
+</script>

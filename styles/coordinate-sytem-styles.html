@@ -1,0 +1,242 @@
+<dom-module id="d3-coordinate-system">
+    <style>
+        /**
+         * @see https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/shape-rendering
+         * @see https://www.w3.org/TR/SVGTiny12/painting.html#NonScalingStroke
+         */
+        :host line,
+        :host circle,
+        :host .scatterplot-triangle,
+        :host .axis {
+            shape-rendering: auto;
+            vector-effect: non-scaling-stroke;
+        }
+
+        /*** Axis ***/
+
+        :host .not-selectable-item {
+            cursor: default;
+
+            -webkit-user-select: none;
+               -moz-user-select: none;
+                -ms-user-select: none;
+                    user-select: none;
+        }
+
+        :host .axis {
+            fill: var(--coordinate-system-axis-fill, #000);
+        }
+
+        :host .axis .tick {
+            position: relative;
+        }
+
+        :host .tick > text {
+            cursor: default;
+
+            -webkit-user-select: none;
+               -moz-user-select: none;
+                -ms-user-select: none;
+                    user-select: none;
+        }
+
+        :host .tick > line {
+            stroke: red;
+        }
+
+        /**
+         * @see https://bl.ocks.org/mbostock/6123708
+         */
+        :host .axis-line {
+            position: relative;
+            opacity: .4;
+
+            fill: var(--coordinate-system-axis-line-fill, none);
+            stroke: var(--coordinate-system-axis-line-stroke, #ddd);
+        }
+        /* Ticks */
+
+        /*** Axis ***/
+
+        /**** Shared styles between drawing types ***/
+        :host .coordinate-system-lines > line:hover,
+        :host .coordinate-system-circles-line-connection > line:hover,
+        :host .coordinate-system-ray-line:hover {
+            cursor: pointer;
+        }
+
+        :host .circle-open-point {
+            fill-opacity: 0;
+        }
+
+        :host .circle-closed-point {
+            fill-opacity: 1.0;
+        }
+        /**** Shared styles between drawing types ***/
+
+        /*** Points ***/
+        /**
+         * @see https://bl.ocks.org/mbostock/6123708
+         */
+        :host .coordinate-system-circles > circle {
+            fill: var(--coordinate-system-circle-fill, #ff0000);
+            stroke: var(--coordinate-system-circle-stroke, #ff0000);
+            stroke-width: var(--coordinate-system-circle-stroke-width, 3.5px);
+
+            cursor: pointer;
+        }
+
+        :host .coordinate-system-circles > .active-d3-item,
+        :host .coordinate-system-circles > .circle-dragging {
+            fill: var(--coordinate-system-active-circle-fill, #890000);
+            stroke: var(--coordinate-system-active-circle-stroke, #890000);
+
+            stroke-width: var(--coordinate-system-circle-stroke-width, 3.5px);
+        }
+
+        :host .coordinate-system-mouse-over-text {
+            fill: var(--coordinate-system-circle-text-mouser-over-fill, none);
+            stroke: var(--coordinate-system-circle-text-mouser-over-stroke, #1a7702);
+            stroke: var(--coordinate-system-circle-text-mouser-over-stroke-width, 1px);
+            font-size: var(--coordinate-system-circle-text-mouser-over-point-size, 10.5px);
+        }
+        /*** Points ***/
+
+        /*** Line ***/
+        :host .coordinate-system-line {
+            fill: var(--coordinate-system-line-stroke, #ff0000);
+
+            stroke: var(--coordinate-system-line-stroke, #ff0000);
+            stroke-width: var(--coordinate-system-line-stroke-width, 3px);
+            stroke-opacity: var(--coordinate-system-line-stroke-opacity, 1);
+        }
+
+        :host .line-dragging,
+        :host .coordinate-system-line.active-d3-item {
+            stroke: var(--coordinate-system-active-line-stroke, #890000);
+            stroke-width: var(--coordinate-system-active-line-stroke-width, 3px);
+        }
+
+        :host .line-end-point-marker-normal {
+            fill: var(--coordinate-system-line-stroke, #ff0000);
+        }
+
+        :host .line-end-point-marker-active {
+            fill: var(--coordinate-system-active-line-stroke, #890000);
+        }
+
+        :host .line-snap-grid {
+            fill: var(--coordinate-system-line-snap-to-grid-stroke, #000);
+            /* stroke: var(--coordinate-system-line-snap-to-grid-stroke, #999); */
+            stroke-width: var(--coordinate-system-line-snap-to-grid-stroke-width, 1px);
+            fill-opacity: var(--coordinate-system-line-snap-to-grid-fill-opacity, .1);
+        }
+
+        :host .line-drag-end-point {
+            fill-opacity: .1;
+
+            cursor: pointer;
+        }
+
+        :host .line-drag-end-point:hover {
+            fill-opacity: .6;
+
+            fill: var(--coordinate-system-line-drag-end-point-hover-fill, #a2d8fd);
+        }
+        /*** Line ***/
+
+        /*** Segments ***/
+        :host .coordinate-system-segment-circle {
+            fill: var(--coordinate-system-segments-circle-fill, #ff0000);
+            stroke: var(--coordinate-system-segments-circle-stroke, #ff0000);
+            stroke-width: var(--coordinate-system-segments-circle-stroke-width, 3.5px);
+        }
+
+        :host .coordinate-system-segment-circle:hover {
+            cursor: pointer;
+        }
+
+        :host .coordinate-system-segment-circle.active-d3-item {
+            fill: var(--coordinate-system-active-segments-circle-fill, #890000);
+            stroke: var(--coordinate-system-active-segments-circle-stroke, #890000);
+            stroke-width: var(--coordinate-system-active-segments-circle-stroke-width, 3.5px);
+        }
+
+        :host .coordinate-system-segment-line {
+            stroke: var(--coordinate-system-segments-line-stroke, #ff0000);
+            stroke-width: var(--coordinate-system-segments-line-stroke-width, 3px);
+            stroke-opacity: var(--coordinate-system-segments-line-stroke-opacity, 1);
+        }
+
+        :host .coordinate-system-segment-line.active-d3-item {
+            stroke: var(--coordinate-system-active-segments-line-stroke, #890000);
+            stroke-width: var(--coordinate-system-active-segments-line-stroke-width, 3px);
+        }
+        /*** Segments ***/
+
+        /*** Rays ***/
+        :host .coordinate-system-ray-circle {
+            fill: var(--coordinate-system-ray-circle-fill, #ff0000);
+            stroke: var(--coordinate-system-ray-circle-stroke, #ff0000);
+            stroke-width: var(--coordinate-system-ray-circle-stroke-width, 3.5px);
+        }
+
+        :host .coordinate-system-ray-circle:hover {
+            cursor: pointer;
+        }
+
+        :host .coordinate-system-ray-circle.active-d3-item {
+            fill: var(--coordinate-system-active-ray-circle-fill, #890000);
+            stroke: var(--coordinate-system-active-ray-circle-stroke, #890000);
+            stroke-width: var(--coordinate-system-active-ray-circle-stroke-width, 3.5px);
+        }
+
+        :host .coordinate-system-ray-line {
+            stroke: var(--coordinate-system-ray-line-stroke, #ff0000);
+            stroke-width: var(--coordinate-system-ray-line-stroke-width, 2px);
+        }
+
+        :host .coordinate-system-ray-line.active-d3-item {
+            stroke: var(--coordinate-system-active-ray-line-stroke, #890000);
+            stroke-width: var(--coordinate-system-active-ray-line-stroke-width, 2px);
+        }
+
+        :host .ray-end-point-marker-normal {
+            fill: var(--coordinate-system-ray-line-stroke, #ff0000);
+        }
+
+        :host .ray-end-point-marker-active {
+            fill: var(--coordinate-system-active-ray-line-stroke, #890000);
+        }
+        /*** Rays ***/
+
+        /*** Scatterplot ***/
+
+        /* Scatterplot Triangles */
+        /**
+         * @see http://bl.ocks.org/mbostock/3244058
+         */
+        :host .scatterplot-triangle {
+            fill: var(--coordinate-system-scatterplot-triangle-circle-fill, steelblue);
+            stroke: var(--coordinate-system-scatterplot-triangle-circle-stroke, #000);
+        }
+        /* Scatterplot Triangles */
+
+        /*** Scatterplot ***/
+
+        /*** Markers ***/
+        :host .axis-marker {
+            fill: var(--coordinate-system-axis-marker-fill, #000);
+        }
+
+        :host .marker-open-arrow-transparent-part {
+            fill: white;
+        }
+
+        :host .marker-open-arrow-closed-part {
+            fill: black;
+        }
+        /*** Markers ***/
+    </style>
+    <template></template>
+</dom-module>

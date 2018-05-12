@@ -1,0 +1,80 @@
+<!--
+`App.Interactions.Graphs.CoordinateSystem.Markers.Behaviors.RayMarker`
+is caring about the ray marker configurations (only the marker-end).
+-->
+<link rel="import" href="../../../../../scripts/namespace.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Markers.Behaviors', function(namespace) {
+
+        namespace.RayMarker = {
+
+            /**
+             * @see http://bl.ocks.org/tomgp/d59de83f771ca2b6f1d4
+             * @see http://bl.ocks.org/mbostock/1153292
+             *
+             * @return {Object} markers
+             */
+            generateRayDrawingMarkers: function() {
+                var markers = {};
+
+                // Generate the normal
+                markers['ray-normal-marker-end'] =
+                    this.__generateRayMarkerEnd('normal');
+
+                // Generate the active state (The ray is selected by end user)
+                markers['ray-active-marker-end'] =
+                    this.__generateRayMarkerEnd('active');
+
+                return markers;
+            },
+
+             /**
+              * Method is generating the ray marker-end properties
+              *
+              * @param {String} classNamePrefix
+              */
+            __generateRayMarkerEnd: function(classNamePrefix) {
+                var pathProperties = [
+                    // Left side
+                    {
+                        'd': 'M10,0 L0,-6 L8,0',
+                        'class': 'ray-end-point-marker-' + classNamePrefix
+                    },
+
+                    // Right side
+                    {
+                        'd': 'M10,0 L0,6 L8,0',
+                        'class': 'ray-end-point-marker-' + classNamePrefix
+                    }
+                ];
+
+                var markerProperties = this.__getRayMarkerProperties();
+                // Rewrite the default starting position
+                markerProperties['refX'] = 9;
+
+                var properties = {
+                    markerProperties: markerProperties,
+                    pathProperties: pathProperties
+                };
+
+                return properties;
+            },
+
+            __getRayMarkerProperties: function() {
+                // Marker properties
+                return markerProperties = {
+                    'id': function(d) {
+                        return d;
+                    },
+                    'viewBox': '0 -5 10 10',
+                    'refX': 0,
+                    'refY': 0,
+                    'markerWidth': 10,
+                    'markerHeight': 10,
+                    'orient': 'auto'
+                };
+            }
+        };
+    });
+</script>

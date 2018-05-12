@@ -1,0 +1,265 @@
+<!--
+`App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.Endpoints` will add for
+each lines transparent end points and this points will have a drag behavioir
+to resize the line
+-->
+<link rel="import" href="../../../../scripts/namespace.html">
+
+<!--
+Shared properties:
+1. interactionSettings.snapToGridIsEnable
+-->
+<link rel="import" href="../CoordinateSystemSharedPropertiesBehaviour.html">
+<link rel="import" href="../CoordinateSystemSnapToGridBehaviour.html">
+
+<!--
+Shared properties:
+1. containerLines
+-->
+<link rel="import" href="CoordinateSystemLineSharedPropertiesBehavior.html">
+<link rel="import" href="CoordinateSystemLineShadeGridBehaviour.html">
+<link rel="import" href="CoordinateSystemLineStylesBehaviour.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Line.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.Endpoints = [
+            App.Interactions.Graphs.CoordinateSystem.Behaviors.SharedProperties,
+            App.Interactions.Graphs.CoordinateSystem.Behaviors.SnapToGrid,
+
+            App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.SharedProperties,
+            App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.ShadeToGrid,
+            App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.Styles, {
+
+            /*** Constants ***/
+            getLineEndpointClassName: function() {
+                return 'line-endpoint-has-drag';
+            },
+
+            getLineEndPointAttributes: function() {
+                return {
+                    'r': 12,
+                    'class': 'line-drag-end-point',
+                    'cx': function(d) {
+                        return d.x;
+                    },
+                    'cy': function(d) {
+                        return d.y;
+                    }
+                };
+            },
+            /*** Constants ***/
+
+
+            /**
+             * Method is creating a points / dots collection and the collection data
+             * will be used for creating endPoints
+             *
+             * @see https://bl.ocks.org/dimitardanailov/bb12fef05c5ed56e793728ed8e84bb81
+             *
+             * The input data is:
+             *
+             * ```
+             * <g>
+             *     ...
+             *     <line></line>
+             *     ...
+             * </g>
+             * ```
+             *
+             * The output date will be:
+             *
+             * The output data:
+             *
+             * ```
+             * <g>
+             *     ...
+             *     <circle></circle>
+             *     <line></line>
+             *     <circle></circle>
+             *     ...
+             * </g>
+             * ```
+             *
+             * @param {ArrayObject} lines
+             */
+            createLineEndPoints: function(lines) {
+                var topPoints = d3.topPoints(lines); // d3-map-points-collection
+                var bottomPoints = d3.bottomPoints(lines); // d3-map-points-collection
+                var attributes = this.getLineEndPointAttributes();
+                var drag = this.__getLineEndPointDragBehavior();
+
+                var self = this;
+                this.containerLines
+                    .selectAll('.' + this.getDrawingLineClassNameContainer())
+                        .each(function(d, i) {
+                            self.d3.select(this) // group
+                                .selectAll('circle')
+                                    .data([topPoints[i], bottomPoints[i]])
+                                .enter()
+                                    .append('circle')
+                                        .attr(attributes)
+                                        .call(drag);
+                        });
+            },
+
+            /**
+             * @see https://bl.ocks.org/mbostock/6123708
+             * @see http://bl.ocks.org/sgruhier/1d692762f8328a2c9957
+             * @see https://github.com/d3/d3/blob/master/API.md#dragging-d3-drag
+             * @see http://bl.ocks.org/mbostock/1557377
+             * @see https://jsfiddle.net/3k2u8buk/
+             * @see https://bl.ocks.org/dimitardanailov/bb12fef05c5ed56e793728ed8e84bb81
+             *
+             * @return {D3Function} drag
+             */
+            __getLineEndPointDragBehavior: function() {
+                var self = this;
+
+                var drag = this.d3.behavior.drag()
+                    .origin(function(event) { return event; })
+                    .on('dragstart', function() {
+                        self.__lineEndPointDragstarted(this);
+                    })
+                    .on('drag', function(d) {
+                        self.__lineEndPointDragged(d, this);
+                    })
+                    .on('dragend', function(d) {
+                        self.__lineEndPointDragended(this);
+                    });
+
+                return drag;
+            },
+
+            /**
+             * @see https://bl.ocks.org/mbostock/6123708
+             * @see http://bl.ocks.org/sgruhier/1d692762f8328a2c9957
+             * @see https://github.com/d3/d3/blob/master/API.md#dragging-d3-drag
+             * @see http://bl.ocks.org/mbostock/1557377
+             * @see https://jsfiddle.net/3k2u8buk/
+             * @see https://bl.ocks.org/dimitardanailov/bb12fef05c5ed56e793728ed8e84bb81
+             *
+             * @param {D3Object} currentElement
+             */
+            __lineEndPointDragstarted: function(currentElement) {
+                // silence other listeners
+                this.d3.event.sourceEvent.stopPropagation();
+
+                var endPoint = d3.select(currentElement);
+                endPoint.classed(this.getLineEndPointAttributes(), true);
+
+                var lineGroup = this.d3.select(currentElement.parentNode);
+                var line = lineGroup.selectAll('line');
+
+                if (!line.empty()) {
+                    // App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.Styles
+                    this.setActiveDrawingLine(line);
+                    this.drawingLineRollbackToolbarStyles();
+                }
+            },
+
+            /**
+             * @see https://bl.ocks.org/mbostock/6123708
+             * @see http://bl.ocks.org/sgruhier/1d692762f8328a2c9957
+             * @see https://github.com/d3/d3/blob/master/API.md#dragging-d3-drag
+             * @see http://bl.ocks.org/mbostock/1557377
+             * @see https://jsfiddle.net/3k2u8buk/
+             * @see https://bl.ocks.org/dimitardanailov/bb12fef05c5ed56e793728ed8e84bb81
+             *
+             * @param {D3EventListenerIntance} event
+             * @param {D3Object} currentElement
+             */
+            __lineEndPointDragged: function(d, currentElement) {
+                var marker = this.d3.select(currentElement);
+                var lineGroup = this.d3.select(currentElement.parentNode);
+                var line = lineGroup.selectAll('line');
+
+                if (!line.empty()) {
+
+                    d.x += (this.d3.event.dx / this.externalZoom);
+                    d.y += (this.d3.event.dy / this.externalZoom);
+
+                    // Update the marker properties
+                    marker
+                        .attr('cx', d.x)
+                        .attr('cy', d.y);
+
+                    // Update the line properties
+                    line
+                        .attr('x1', function(lineData) {
+                            return d.marker === 'marker-start' ? lineData.x1 = d.x : lineData.x1;
+                        })
+                        .attr('y1', function(lineData) {
+                            return d.marker === 'marker-start' ? lineData.y1 = d.y : lineData.y1;
+                        })
+                        .attr('x2', function(lineData) {
+                            return d.marker === 'marker-end' ? lineData.x2 = d.x : lineData.x2;
+                        })
+                        .attr('y2', function(lineData) {
+                            return d.marker === 'marker-end' ? lineData.y2 = d.y : lineData.y2;
+                        });
+                }
+                //App.Interactions.Graphs.CoordinateSystem.Behaviors.SnapToGrid
+                this.resizeLineShading(currentElement.parentNode, false);
+            },
+
+            /**
+             * @see https://bl.ocks.org/mbostock/6123708
+             * @see http://bl.ocks.org/sgruhier/1d692762f8328a2c9957
+             * @see https://github.com/d3/d3/blob/master/API.md#dragging-d3-drag
+             * @see http://bl.ocks.org/mbostock/1557377
+             * @see https://jsfiddle.net/3k2u8buk/
+             * @see https://bl.ocks.org/dimitardanailov/bb12fef05c5ed56e793728ed8e84bb81
+             *
+             * @param {D3Object} currentElement
+             */
+            __lineEndPointDragended: function(currentElement) {
+                // silence other listeners
+                this.d3.event.sourceEvent.stopPropagation();
+
+                this.d3.select(currentElement)
+                    .classed(this.getLineEndPointAttributes(), false);
+
+                var group = this.d3.select(currentElement.parentNode);
+                var line = group.selectAll('line');
+
+                if (!line.empty()) {
+                    // Snap to grid is enable
+                    if (this.interactionSettings.snapToGridIsEnable) {
+                        this.__snapToGridDrawingLineElements(group, line);
+                    }
+
+                    this.resizeLineShading(currentElement.parentNode, true);
+                }
+
+                // Reset coordinates system active items
+                // App.Interactions.Graphs.CoordinateSystem.Line.Behaviors.Styles
+                this.removeAllDrawingActiveItems();
+                this.drawingLineRollbackToolbarStyles();
+
+                // Update the hear beat
+                this.notifyPath('coordinateResponseData.lines',
+                    [].concat(this.coordinateResponseData.lines));
+            },
+
+            /**
+             * @param {D3Element} group
+             * @param {D3Element} line
+             */
+            __snapToGridDrawingLineElements: function(group, line) {
+                var self = this;
+                group.selectAll('circle')
+                    .each(function() {
+                        // App.Interactions.Graphs.CoordinateSystem.Behaviors.SnapToGrid
+                        self.snapToGridCircle(
+                            self.d3.select(this)
+                        );
+                    });
+
+                // App.Interactions.Graphs.CoordinateSystem.Behaviors.SnapToGrid
+                this.snapToGridRayLine(line);
+            }
+        }];
+    });
+</script>

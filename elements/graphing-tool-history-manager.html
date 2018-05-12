@@ -1,0 +1,115 @@
+<link rel="import" href="../../../polymer/polymer.html">
+
+<dom-module id="graphing-tool-history-manager">
+    <script>
+        (function () {
+            Polymer({
+                is: 'graphing-tool-history-manager',
+
+                properties: {
+
+                    data: {
+                        type: Object,
+                        value: function() { return {}; },
+                        notify: true
+                    },
+
+                    /**
+                     * @property variable is saving a reference about XML data
+                     */
+                    historyManagerDefaultValue: {
+                        type: Object,
+                        value: function() { return {}; },
+                    },
+
+                    undo: {
+                        type: Array,
+                        value: function() { return []; },
+                        notify: true
+                    },
+
+                    hasUndo: {
+                        type: Boolean,
+                        value: false,
+                        notify: true
+                    },
+
+                    redo: {
+                        type: Array,
+                        value: function() { return []; },
+                        notify: true
+                    },
+
+                    hasRedo: {
+                        type: Boolean,
+                        value: false,
+                        notify: true
+                    }
+                },
+
+                observers: [
+                    '_hasNewData(data.dots.*)',
+                    '_hasNewData(data.lines.*)',
+
+                    '_hasNewData(data.segmentsDots.*)',
+                    '_hasNewData(data.segmentsLines.*)',
+
+                    '_hasNewData(data.raysDots.*)',
+                    '_hasNewData(data.raysLines.*)',
+                ],
+
+                /*** Undo ***/
+
+                /**
+                 */
+                _hasNewData: function() {
+                    // The toolbar buttons can't be clicked
+                    this.hasUndo = null;
+
+                    this.debounce('_dataIsUpdated', function() {
+                        var jsonData = JSON.stringify(this.data);
+                        this._dataIsUpdated(jsonData);
+                        this._undoIsEnable(jsonData);
+
+                        this._redoIsEnable();
+                    }, 100);
+                },
+
+                /**
+                 * @param {String} jsonData
+                 */
+                _dataIsUpdated: function(jsonData) {
+                    this.push('undo', { value: jsonData });
+                },
+
+                _undoIsEnable: function(jsonData) {
+                    if (this._undoCollectionIsEmpty()) {
+                        this.hasUndo = false;
+                    } else if (this._undoXMLDataIsActiveItem()) {
+                        this.hasUndo = false;
+                    } else {
+                        this.hasUndo = true;
+                    }
+                },
+
+                _redoIsEnable: function() {
+                    if (this.redo.length > 0) {
+                        this.hasRedo = true;
+                    } else {
+                        this.hasRedo = false;
+                    }
+                },
+
+                _undoCollectionIsEmpty: function() {
+                    return this.undo.length === 0;
+                },
+
+                _undoXMLDataIsActiveItem: function() {
+                    return this.undo.length === 1 &&
+                        (this.undo[0]['value'] === this.historyManagerDefaultValue);
+                },
+                /*** Undo ***/
+            });
+        }());
+    </script>
+</dom-module>

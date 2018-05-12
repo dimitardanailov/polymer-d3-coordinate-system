@@ -1,0 +1,95 @@
+<link rel="import" href="../../../../../scripts/namespace.html">
+
+<script>
+
+    namespace('App.Interactions.Graphs.CoordinateSystem.Scatterplot.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.Triangle = {
+
+            properties: {
+                scatterplotTriangleSettings: {
+                    type: Object,
+                    value: {
+                        className: {
+                            itemClassName: 'scatterplot-triangle',
+                            containerClassName: 'scatterplot-triangle-container'
+                        }
+                    }
+                },
+
+                scatterplotTriangleCointainer: {
+                    type: Object
+                }
+            },
+
+            initializesScatterplotTriangleCointainer: function() {
+                this.scatterplotTriangleCointainer = this.containerTempObjects
+                    .append('g')
+                    .attr('class', this.scatterplotTriangleSettings.className.containerClassName);
+
+            },
+
+            /**
+             * @see http://bl.ocks.org/mbostock/3244058
+             */
+            drawScatterplots: function() {
+                this.triangleDots = this.__dummyData();
+                var className = this.scatterplotTriangleSettings.className.itemClassName;
+                var triangleAttributes = this.__getTriangleSubItemsAttributes();
+
+                this.scatterplotTriangleCointainer
+                    .selectAll('.'  + className)
+                        .data(this.triangleDots)
+                    .enter()
+                        .append('path')
+                        .attr(triangleAttributes);
+            },
+
+
+            __getTriangleSubItemsAttributes: function() {
+                var self = this, coordinates;
+
+                var triangleAttributes = {
+                    'class': this.scatterplotTriangleSettings.className.itemClassName,
+                    d: this.d3.svg.symbol().type('triangle-up'),
+                    transform: function(node) {
+                        var coordinates = self._addZoomCorrections(node);
+
+                        return 'translate(' + coordinates.x + ',' + coordinates.y + ')';
+                    }
+                };
+
+                return triangleAttributes;
+            },
+
+            __dummyData: function() {
+                var data = [
+                    {
+                        x: 5,
+                        y: 90
+                    },
+                    {
+                        x: 25,
+                        y: 30
+                    },
+                    {
+                        x: 45,
+                        y: 60
+                    },
+                    {
+                        x: 65,
+                        y: 55
+                    },
+                    {
+                        x: 85,
+                        y: 25
+                    },
+                ];
+
+                return data;
+            }
+        }
+    });
+
+</script>

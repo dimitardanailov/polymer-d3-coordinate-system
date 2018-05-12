@@ -1,0 +1,116 @@
+<!--
+`App.Interactions.Graphs.CoordinateSystem.Markers.Behaviors.LineMarker`
+is caring about the line marker configurations (marker-start and marker-end).
+-->
+<link rel="import" href="../../../../../scripts/namespace.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Markers.Behaviors', function(namespace) {
+
+        namespace.LineMarker = {
+
+            /**
+             * @see http://bl.ocks.org/tomgp/d59de83f771ca2b6f1d4
+             * @see http://bl.ocks.org/mbostock/1153292
+             *
+             * @return {Object} markers
+             */
+            generateLineDrawingMarkers: function() {
+                var markers = {};
+
+                // Generate the normal
+                markers['line-normal-marker-start'] =
+                    this.__generateLineMarkerStart('normal');
+                markers['line-normal-marker-end'] =
+                    this.__generateLineMarkerEnd('normal');
+
+                // Generate the active state (The line is selected by end user)
+                markers['line-active-marker-start'] =
+                    this.__generateLineMarkerStart('active');
+                markers['line-active-marker-end'] =
+                    this.__generateLineMarkerEnd('active');
+
+                return markers;
+            },
+
+            /**
+             * Method is generating the line marker-start properties
+             *
+             * @param {String} classNamePrefix
+             */
+            __generateLineMarkerStart: function(classNamePrefix) {
+                var pathProperties = [
+                    // Left side
+                    {
+                        'd': 'M0,0 L10,6 L2,0',
+                        'class': 'line-end-point-marker-' + classNamePrefix
+                    },
+
+                    // Right side
+                    {
+                        'd': 'M0,0 L10,-6 L2,0',
+                        'class': 'line-end-point-marker-' + classNamePrefix
+                    },
+                ];
+
+                var markerProperties = this.__getLineMarkerProperties();
+                // Rewrite the default starting position
+                markerProperties['refX'] = 1;
+
+                var properties = {
+                    markerProperties: markerProperties,
+                    pathProperties: pathProperties
+                };
+
+                return properties;
+            },
+
+             /**
+              * Method is generating the line marker-end properties
+              *
+              * @param {String} classNamePrefix
+              */
+            __generateLineMarkerEnd: function(classNamePrefix) {
+                var pathProperties = [
+                    // Left side
+                    {
+                        'd': 'M10,0 L0,-6 L8,0',
+                        'class': 'line-end-point-marker-' + classNamePrefix
+                    },
+
+                    // Right side
+                    {
+                        'd': 'M10,0 L0,6 L8,0',
+                        'class': 'line-end-point-marker-' + classNamePrefix
+                    },
+                ];
+
+                var markerProperties = this.__getLineMarkerProperties();
+                // Rewrite the default starting position
+                markerProperties['refX'] = 9;
+
+                var properties = {
+                    markerProperties: markerProperties,
+                    pathProperties: pathProperties
+                };
+
+                return properties;
+            },
+
+            __getLineMarkerProperties: function() {
+                // Marker properties
+                return markerProperties = {
+                    'id': function(d) {
+                        return d;
+                    },
+                    'viewBox': '0 -5 10 10',
+                    'refX': 0,
+                    'refY': 0,
+                    'markerWidth': 10,
+                    'markerHeight': 10,
+                    'orient': 'auto'
+                };
+            }
+        };
+    });
+</script>

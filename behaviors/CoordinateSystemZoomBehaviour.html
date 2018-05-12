@@ -1,0 +1,137 @@
+<link rel="import" href="../../../scripts/namespace.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.CoordinateSystemZoom = {
+
+            properties: {
+                programmaticallyZoomSettings: {
+                    type: Object,
+                    value: {
+                        factor: 0.5,
+                        duration: 350
+                    }
+                }
+            },
+
+            /**
+             * @see https://bl.ocks.org/mbostock/6123708
+             * @see http://bl.ocks.org/sgruhier/1d692762f8328a2c9957
+             * @see http://bl.ocks.org/benzguo/4370043
+             */
+            getZoomBehavior: function() {
+                var self = this;
+                var zoom = this.d3.behavior.zoom()
+                    .scaleExtent(this.settings.zoom)
+                    .on('zoom', function(event) {
+                        self.zoomed();
+                    });
+
+                return zoom;
+            },
+
+            /**
+             * @see https://bl.ocks.org/mbostock/6123708
+             */
+            zoomed: function() {
+                if (this.settings.zoomIsActive) {
+                    /* this.containerLinesAxis.attr(
+                        "transform",
+                        "translate(" + this.d3.event.translate + ")" + " scale(" + this.d3.event.scale + ")"
+                    ); */
+
+                    this.containerLinesAxis.attr(
+                        'transform',
+                        'translate(' + this.zoom.translate() + ')' +
+                        'scale(' + this.zoom.scale() + ')'
+                    );
+                }
+            },
+
+            /**
+             * @see http://bl.ocks.org/linssen/7352810
+             *
+             * @param {Object} currentElement
+             */
+            programmaticallyZoom: function(currentElement) {
+                this.d3.event.preventDefault();
+
+                // Set zoom-in or zoom-out is direction
+                var direction = (currentElement.id === 'zoomIn') ? 1 : -1;
+
+                // Calculate new zoom value
+                var zoomStep = (1 + this.programmaticallyZoomSettings.factor * direction);
+                var targetZoom = this.zoom.scale() * zoomStep;
+
+                var extent = this.zoom.scaleExtent();
+                if (targetZoom < extent[0] || targetZoom > extent[1]) {
+                    targetZoom = 1;
+                }
+
+                var view = this.__calculateViewCoordinatesByZoomStep(targetZoom);
+
+                this.interpolateZoom(view);
+            },
+
+            /**
+             * @see http://bl.ocks.org/linssen/7352810
+             */
+            interpolateZoom: function(view) {
+                var translate = [view.x, view.y];
+                var scale = view.k;
+                var self = this;
+                var duration = this.programmaticallyZoomSettings.duration;
+
+                return self.d3.transition().duration(duration).tween('zoom', function() {
+                    var iTranslate = self.d3.interpolate(self.zoom.translate(), translate);
+                    var iScale = self.d3.interpolate(self.zoom.scale(), scale);
+
+                    return function (t) {
+                        self.zoom
+                            .scale(iScale(t))
+                            .translate(iTranslate(t));
+
+                        self.zoomed();
+                    };
+                });
+            },
+
+            /**
+             * Calculate view coordinates by new zoom level
+             *
+             * @param {Number} targetZoom
+             */
+            __calculateViewCoordinatesByZoomStep: function(targetZoom) {
+                var translate = this.zoom.translate();
+
+                var view = {
+                    x: translate[0],
+                    y: translate[1],
+                    k: this.zoom.scale()
+                };
+
+                var center = this.getCenter();
+
+                // Calculate
+                var targetTranslate = {
+                    x: (center.horizontal - view.x) / view.k,
+                    y: (center.vertical - view.y) / view.k
+                };
+
+                view.k = targetZoom;
+
+                var zoomLevel = {
+                    x: (targetTranslate.x * view.k + view.x),
+                    y: (targetTranslate.y * view.k + view.y)
+                };
+
+                view.x += center.horizontal - zoomLevel.x;
+                view.y += center.vertical - zoomLevel.y;
+
+                return view;
+            }
+        }
+    });
+</script>

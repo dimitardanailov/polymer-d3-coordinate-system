@@ -1,0 +1,418 @@
+<link rel="import" href="../../../polymer/polymer.html">
+
+<!-- Styles -->
+<link rel="import" href="../../styles/shared-styles.html">
+<link rel="import" href="../../fonts/Nextera/Nextera.html">
+<!-- Styles -->
+
+<!-- Sub elements -->
+<link rel="import" href="../../html-print.html">
+<!-- Sub elements -->
+
+<dom-module id="graph-button">
+    <template strip-whitespace>
+        <style include="shared-styles"></style>
+        <style include="font-styles-nextera"></style>
+
+        <style>
+            :host {
+                position: relative;
+
+                display: inline-block;
+                width: 32px;
+                height: 32px;
+                overflow: hidden;
+
+                font-family: 'Nextera';
+                font-size: 22px;
+
+                background-color: var(--graph-button-background-color, #334049);
+                color: var(--graph-button-color, #a2d8fd);
+
+                cursor: var(--graph-button-cursor, pointer);
+            }
+
+            :host:hover:not(.inactive) {
+                color: var(--graph-button-color, #fff);
+
+                background-color: var(--active-graph-button-background-color, #40505b);
+            }
+
+            :host.active {
+                background-color: var(--active-graph-button-background-color, #40505b);
+
+                border-width: 1px;
+                border-style: solid;
+                border-color: var(--active-graph-button-border-color, #A2D8FD);
+            }
+
+            :host.inactive > .nextera-graph-button-icon,
+            :host.inactive > .nextera-graph-button-text-button {
+                opacity: .3;
+            }
+
+            :host > .nextera-graph-button-text-button {
+                position: absolute;
+                top: 0;
+                right: 0;
+                bottom: 0;
+                left: 0;
+
+                display: -webkit-box;
+
+                display: -ms-flexbox;
+
+                display: flex;
+
+                -webkit-box-orient: vertical;
+                -webkit-box-direction: normal;
+                    -ms-flex-direction: column;
+                        flex-direction: column;
+                -webkit-box-align: center;
+                    -ms-flex-align: center;
+                        align-items: center;
+                -webkit-box-pack: center;
+                    -ms-flex-pack: center;
+                        justify-content: center;
+
+                font-family: 'Open Sans';
+                font-size: 10px;
+                text-transform: uppercase;
+                font-weight: bold;
+                text-align: center;
+            }
+
+            :host .nextera-graph-button-text-button-subitem {
+                position: relative;
+
+                display: block;
+            }
+        </style>
+
+        <template is="dom-if" if="[[__isIconButton(type)]]" restamp="true">
+            [[__addIcon(type)]]
+        </template>
+
+        <template is="dom-if" if="[[__isTextButton(type)]]" restamp="true">
+            <span class="nextera-graph-button-text-button" type$="[[type]]">
+                <span class="nextera-graph-button-text-button-subitem">
+                    Clear
+                </span>
+                <span class="nextera-graph-button-text-button-subitem">
+                    All
+                </span>
+            </span>
+        </template>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'graph-button',
+
+            hostAttributes: {
+                role: 'button',
+                tabindex: 0
+            },
+
+            properties: {
+
+                /**
+                 * @property If isActive is true then the end user could to interact with
+                 * the system for this state
+                 */
+                isActive: {
+                    type: Boolean,
+                    value: false
+                },
+
+                /**
+                 *
+                 * @property Interaction state can't be changed if component is inactive
+                 */
+                inactive: {
+                    type: Boolean,
+                    value: false
+                },
+
+                /**
+                 * @property If student remove all items (press the clear all button),
+                 * the system should be back to normal state and shade to grid buttons should be loaded
+                 * with inactive mode
+                 */
+                inactiveIsDefaultState: {
+                    type: Boolean,
+                    value: false
+                },
+
+                /**
+                 * Button behavior
+                 */
+                state: {
+                    type: String
+                },
+
+                /**
+                 * @property ref link to graph custom interaction
+                 */
+                graphingToolInteraction: {
+                    type: Object
+                },
+
+                type: {
+                    type: String,
+                    value: ''
+                },
+
+                linkedButtons: {
+                    type: Array,
+                    value: function() { return []; }
+                },
+
+                uiConnectedButtons: {
+                    type: Array,
+                    value: function() { return []; }
+                },
+
+                uiToolBarIsActive: {
+                    type: Boolean,
+                    value: null
+                },
+
+                group: {
+                    type: String,
+                    value: ''
+                }
+            },
+
+            observers: [
+                '_uiToolBarIsActiveIsUpdated(uiToolBarIsActive)'
+            ],
+
+            /*** Contants ***/
+
+            /**
+             * Method is access the icon unicode
+             *
+             * @param {String} type
+             */
+            getIconUnicode: function(type) {
+                var unicodes = {
+                    'addClosedPoint': 'e98b',
+                    'addOpenPoint': 'e98f',
+
+                    'addSolidSegmentWithClosedPoints': 'e97d',
+                    'addDashedSegmentWithClosedPoints': 'e97c',
+
+                    'addSolidLine': 'e98e',
+                    'addDashedLine': 'e98d',
+
+                    'addSolidRayWithClosedPoints': 'e97b',
+                    'addDashedRayWithClosedPoints': 'e97a',
+
+                    'lineShadeToGrid': 'e98c',
+                    'lineRemoveShadeToGrid': 'e98a',
+
+                    'removeItem': 'e90b',
+
+                    'redo': 'e912',
+                    'undo': 'e914'
+                };
+
+                if (unicodes.hasOwnProperty(type)) {
+                    return unicodes[type];
+                } else {
+                    return '';
+                }
+            },
+            /*** Contants ***/
+
+            getUiConnectedButtons: function() {
+                return this.uiConnectedButtons;
+            },
+
+            getLinkedButtons: function() {
+                return this.linkedButtons;
+            },
+
+            getGroupName: function() {
+                return this.group;
+            },
+
+            hasNormalState: function() {
+                return !(this.inactiveIsDefaultState);
+            },
+
+            ready: function() {
+                if (this.inactiveIsDefaultState) {
+                    this.turnOnInactive();
+                }
+
+                this.linkedButtons.push(this.type);
+            },
+
+            /**
+             * @param {Object} graphingToolInteraction ref link to graph custom interaction
+             */
+            setGraphingToolInteraction: function(graphingToolInteraction) {
+                this.graphingToolInteraction = graphingToolInteraction;
+            },
+
+            /*** State ***/
+
+            getState: function() {
+                return this.state;
+            },
+
+            setState: function(state) {
+                this.state = state;
+            },
+
+            /*** State ***/
+
+            /*** Is active ***/
+
+            getIsActive: function() {
+                return this.isActive;
+            },
+
+            updateIsActive: function() {
+                this.isActive = !(this.isActive);
+
+                this.updateStyle();
+            },
+
+            setNormalState: function() {
+                this.inactive = false;
+                this.isActive = false;
+
+                this.updateStyle();
+            },
+
+            /*** Is active ***/
+
+            /*** Inactive ***/
+
+            getIsInactive: function() {
+                return this.inactive;
+            },
+
+            getUiToolBarIsActive: function() {
+                return this.uiToolBarIsActive;
+            },
+
+            turnOnInactive: function() {
+                this.inactive = true;
+
+                this.setInactiveStyle();
+            },
+
+            turnOffInactive: function() {
+                this.inactive = false;
+
+                this.revertDefaultStyle();
+            },
+
+            /*** Inactive ***/
+
+            /*** Styles ***/
+            updateStyle: function() {
+                this.classList.remove('inactive');
+
+                if (this.isActive) {
+                    this.classList.add('active');
+                    this.graphingToolInteraction.updateGraphButtonsStyle(this.state);
+                } else {
+                    this.classList.remove('active');
+                }
+
+                this.customStyle['--graph-button-cursor'] = 'pointer';
+
+                this.updateStyles();
+            },
+
+            revertDefaultStyle: function() {
+                this.isActive = false;
+
+                this.classList.remove('active', 'inactive');
+                this.updateStyles();
+            },
+
+            setInactiveStyle: function() {
+                this.isActive = false;
+
+                this.classList.remove('active');
+                this.classList.add('inactive');
+
+                this.customStyle['--graph-button-cursor'] = 'not-allowed';
+                this.updateStyles();
+            },
+
+            /**
+             * @param {Boolean} uiToolBarIsActive
+             */
+            _uiToolBarIsActiveIsUpdated: function(uiToolBarIsActive) {
+                if (this.inactive || uiToolBarIsActive === null) {
+                    return;
+                }
+
+                if (uiToolBarIsActive) {
+                    this.setInactiveStyle();
+                } else {
+                    this.revertDefaultStyle();
+                }
+            },
+            /*** Styles ***/
+
+            /*** Icons ***/
+
+            /**
+             * @param {String} type
+             */
+            __isTextButton: function(type) {
+                switch (type) {
+                    case 'reset':
+                        return true;
+                        break;
+                    default:
+                        return false;
+                        break;
+                }
+            },
+
+            /**
+             * @param {String} type
+             */
+            __isIconButton: function(type) {
+                switch (type) {
+                    case 'reset':
+                        return false;
+                        break;
+                    default:
+                        return true;
+                        break;
+                }
+            },
+
+            /**
+             *
+             * @see http://stackoverflow.com/questions/14294935/unicode-via-css-before
+             *
+             * @param {String} type
+             */
+            __addIcon: function(type) {
+                var className = 'nextera-graph-button-icon icon-graph-button-' + type;
+
+                var container = document.createElement('html-print');
+                container.setAttribute('class', className);
+
+                var unicode = this.getIconUnicode(type);
+                if (unicode.length > 0) {
+                    container.setAttribute('content', '&#x' + unicode + ';')
+                }
+
+                Polymer.dom(this.root).appendChild(container);
+            },
+            /*** Icons ***/
+        });
+    </script>
+</dom-module>

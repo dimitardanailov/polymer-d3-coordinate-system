@@ -1,0 +1,50 @@
+<link rel="import" href="../../../../scripts/namespace.html">
+
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Styles.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.Base = {
+
+            /**
+             * Update follow containers:
+             */
+            updateClassNames: function() {
+                switch (this.interactionState) {
+                    case 'addLine':
+                        this.__setAddLineStyles();
+
+                        break;
+                    default:
+                        this.__defaultStyles();
+
+                        break;
+                }
+
+                this.updateSVGStyles();
+            },
+
+            /**
+             * Update follow containers:
+             * 1. containerTempObjects
+             * 2. Main wrapper
+             */
+            __defaultStyles: function() {
+                // containerTempObjects
+                this.containerTempObjects
+                    .attr('class', this.settings.tempObjectsContainer.defaultClassName);
+
+                this.wrapper.element.style.cursor = 'default';
+            },
+
+            /**
+             * Update follow containers:
+             * 1. Main wrapper
+             */
+            __setAddLineStyles: function() {
+                this.wrapper.element.style.cursor = 'crosshair';
+            }
+        }
+    });
+</script>

@@ -1,0 +1,137 @@
+<link rel="import" href="../../../../scripts/namespace.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.QTI.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.AxisConfigurations = {
+
+            /**
+             * Method is updating (override) the d3js setting with QTI xml configurations
+             *
+             * @param {Object} axisConfigirations
+             */
+            loadQtiAxisConfigurations: function(axisConfigirations) {
+                if (typeof axisConfigirations !== 'object') {
+                    return;
+                }
+
+                // xAxis configurations
+                if (axisConfigirations.hasOwnProperty('xAxis') && axisConfigirations.xAxis !== null) {
+                    this.loadQtixAxisConfigurations(axisConfigirations.xAxis);
+                }
+
+                // yAxis configurations
+                if (axisConfigirations.hasOwnProperty('yAxis') && axisConfigirations.yAxis !== null) {
+                    this.loadQtiyAxisConfigurations(axisConfigirations.yAxis);
+                }
+            },
+
+            /**
+             * @param {Object} xAxis
+             */
+            loadQtixAxisConfigurations: function(xAxis) {
+                // horizontal label
+                this.xAxisLabel = xAxis.label;
+
+                // Grid endpoints
+                this.axisConfigirations.xAxis.drawArrowHead = xAxis.showGridArrows;
+
+                // Draw grid lines
+                this.axisConfigirations.xAxis.drawGridLines = xAxis.showGridLines;
+
+                // Set the tick configurations
+                this.loadQtiAxisTicksConfigurations(xAxis.ticks, 1);
+            },
+
+            /**
+             * @param {Object} yAxis
+             */
+            loadQtiyAxisConfigurations: function(yAxis) {
+                // vertical label
+                this.yAxisLabel = yAxis.label;
+
+                // grid endpoints
+                this.axisConfigirations.yAxis.drawArrowHead = yAxis.showGridArrows;
+
+                // Draw grid lines
+                this.axisConfigirations.yAxis.drawGridLines = yAxis.showGridLines;
+
+                // Set the tick configurations
+                this.loadQtiAxisTicksConfigurations(yAxis.ticks, -1);
+            },
+
+            /**
+             * @param {Object} ticks
+             * @param {Integer} direction (1 will be from left to right, -1 will be from top to bottom)
+             */
+            loadQtiAxisTicksConfigurations: function(ticks, direction) {
+                var key;
+
+                // from left to right
+                if (direction > 0) {
+                    key = 'xAxis';
+                } else { // from top to bottom
+                    key = 'yAxis';
+                }
+
+                // Set maximumValue and domain range
+                if (ticks.minimumValue !== null && ticks.maximumValue !== null) {
+                    this.axisConfigirations[key].maximumValue = ticks.maximumValue;
+
+                    var domain = [
+                        ticks.minimumValue * direction,
+                        ticks.maximumValue * direction
+                    ];
+
+                    this.axisConfigirations[key].domain = domain;
+                }
+
+                // Set tick step
+                // @see App.Interactions.Graphs.D3.Behaviors.Base
+                this.axisConfigirations[key].tickStep = this.updateD3VariableWithQtiVariable(
+                    ticks.tickStep,
+                    this.axisConfigirations[key].tickStep
+                );
+
+                // Draw axis zero tick
+                this.axisConfigirations[key].displayZero = ticks.showTickZero;
+
+                // Size between each axis line
+                if (typeof ticks.lineSize === 'number') {
+                    // @see App.Interactions.Graphs.D3.Behaviors.Base
+                    this.axisConfigirations[key].stepBetweenLines =
+                        this.calculateStepBetweenLines(key, ticks.lineSize);
+                }
+            },
+
+            /**
+             * Method is calculating the dimensions between each axis line
+             *
+             * @example If the dimensions are equal to 500px and domain is
+             * [-10, 10]. In this case the tick per page are 20
+             * (The system is exclude the zero) from calculation
+             * `stepBetweenLines` = 500 / (20 + lineSize)
+             *
+             * @param {String} key xAxis or yAxis
+             * @param {Integer} lineSize
+             *
+             * @return {Integer} stepBetweenLines
+             */
+            calculateStepBetweenLines: function(key, lineSize) {
+                var dimensions = this.dimensions.height;
+
+                if (key === 'xAxis') {
+                    dimensions = this.dimensions.width;
+                }
+
+                var domain = this.axisConfigirations[key].domain;
+                var ticksPerPage = Math.abs(domain[0]) + Math.abs(domain[1]);
+
+                var stepBetweenLines = (dimensions / (ticksPerPage * lineSize));
+
+                return stepBetweenLines;
+            },
+        };
+    });
+</script>

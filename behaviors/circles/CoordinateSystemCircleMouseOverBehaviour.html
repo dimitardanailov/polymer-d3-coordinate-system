@@ -1,0 +1,122 @@
+<link rel="import" href="../../../../scripts/namespace.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Circle.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.MouseOver = {
+
+            properties: {
+                mouseOverCircleSettings: {
+                    type: Object,
+                    value: {
+                        text: {
+                            offsetTop: 4,
+                            offsetLeft: 25,
+                            idTemplate: 'mouse-over-text-component-{{circleId}}',
+                            className: 'coordinate-system-mouse-over-text'
+                        }
+                    }
+                }
+            },
+
+            /**
+             * @see http://bl.ocks.org/hlucasfranca/f133da4493553963e710
+             *
+             * @param {Object} event
+             * @param {Object} currentElement
+             * @param {Integer} circleId
+             */
+            circleHandleMouseOver: function(event, currentElement, circleId) {
+                this.mouseOverCircleStyle(currentElement);
+                this._onTapDefaultBehavior(currentElement);
+
+                this.circleMouseOverTextComponent(circleId);
+            },
+
+            /**
+             * @see http://bl.ocks.org/hlucasfranca/f133da4493553963e710
+             *
+             * @param {Object} event
+             * @param {Object} currentElement
+             * @param {Integer} circleId
+             */
+            circleHandleMouseOut: function(event, currentElement, circleId) {
+                this.defaultCircleStyle(currentElement);
+                var id = this.__generateMouseOverTextId();
+
+                this.d3.select('#' + id).remove();
+            },
+
+            /**
+             * When user start dragging disable mouseover and clear all text messages.
+             */
+            destroyTextComponents: function() {
+                this.d3.select('.' + this.mouseOverCircleSettings.text.className).remove();
+            },
+
+            /**
+             * When use mouse over to circle, method will added textbox with
+             * coordinates information.
+             *
+             * @param {Integer} circleId
+             */
+            circleMouseOverTextComponent: function(circleId) {
+                var textAttributes = this.__getTextMouseOverAttributes();
+                var self = this;
+                var text = this.containerTempObjects
+                    .append('text')
+                    .attr(textAttributes)
+                    .text(function() {
+                        // Add point margin corrections
+                        self.coordinates = self._addPointMarginCorrections(self.coordinates);
+                        var invertCoordinates = self._invertCoordinates(self.coordinates);
+
+                        // Value of the text
+                        return [
+                            invertCoordinates.x,
+                            invertCoordinates.y
+                        ]
+                    });
+            },
+
+            /**
+             * @param {Integer} circleId
+             */
+            __getTextMouseOverAttributes: function(circleId) {
+                // Generate the circle ID
+                var id = this.__generateMouseOverTextId();
+
+                // Update the coordinates
+                var marginX = (this.margin.right + this.margin.left) / 2;
+                var marginY = (this.margin.top + this.margin.bottom) / 2;
+
+                var self = this;
+                var textAttributes = {
+                    id: id,
+                    'class': self.mouseOverCircleSettings.text.className,
+                    x: function() {
+                        var x = (self.coordinates.x - self.mouseOverCircleSettings.text.offsetLeft + marginX);
+
+                        return x;
+                    },
+                    y: function() {
+                        var y = (self.coordinates.y - self.mouseOverCircleSettings.text.offsetTop + marginY);
+
+                        return y;
+                    }
+                };
+
+                return textAttributes;
+            },
+
+            /**
+             * @param {Number} circleId
+             */
+            __generateMouseOverTextId: function(circleId) {
+                return this.mouseOverCircleSettings.text.idTemplate
+                    .replace('{{circleId}}', circleId);
+            },
+        }
+    });
+</script>

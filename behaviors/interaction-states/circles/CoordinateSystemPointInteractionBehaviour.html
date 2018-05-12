@@ -1,0 +1,95 @@
+<!--
+`App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.PointInteraction`
+remove the previous svg listeners and prepare the system for drawing (transforming, etc) a point
+-->
+
+<link rel="import" href="../../../../../scripts/namespace.html">
+
+<!--
+Shared properties:
+1. pointsAreOpen
+-->
+<link rel="import" href="../../CoordinateSystemSharedPropertiesBehaviour.html">
+
+<link rel="import" href="../../circles/CoordinateSystemCircleBehaviour.html">
+<link rel="import" href="../../circles/CoordinateSystemCircleStylesBehaviour.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.PointInteraction = [
+            App.Interactions.Graphs.CoordinateSystem.Behaviors.SharedProperties,
+            App.Interactions.Graphs.CoordinateSystem.Circle.Behaviors.Circle,
+            App.Interactions.Graphs.CoordinateSystem.Circle.Behaviors.Styles, {
+
+            properties: {
+                interactionState: {
+                    type: String,
+                    value: null
+                },
+            },
+
+            getAddOpenPointInteractionState: function() {
+                return 'addOpenPoint';
+            },
+
+            getAddClosedPointInteractionState: function() {
+                return 'addClosedPoint';
+            },
+
+            /**
+             * State: open point
+             */
+            setAddOpenPointInteractionState: function() {
+                // Change the interaction state
+                this.interactionState = this.getAddOpenPointInteractionState();
+
+                // Set the open points configurations
+                this.pointsAreOpen = true;
+
+                this.__loadAddPointInteractionSettings();
+            },
+
+            /**
+             * State: closed point
+             */
+            setAddClosedPointInteractionState: function() {
+                // Change the interaction state
+                this.interactionState = this.getAddClosedPointInteractionState();
+
+                // Set the open points configurations
+                this.pointsAreOpen = false;
+
+                this.__loadAddPointInteractionSettings();
+            },
+
+            /**
+             * Method is calling by redo or undo
+             */
+            callPointsHistoryState: function() {
+                // App.Interactions.Graphs.CoordinateSystem.Circle.Behaviors.Circle
+                this.reDrawCircles();
+            },
+
+            /**
+             * Method is loading the default configurations for drawing type point
+             */
+            __loadAddPointInteractionSettings: function() {
+                // Destroy all event listeners
+                this.destroyCoordinateSystemListeners();
+
+                // The user is able to add a points
+                // this.settings.zoomIsActive = false;
+
+                // Attach event listener (Draw circle)
+                // App.Interactions.Graphs.CoordinateSystem.Circle.Behaviors.Circle
+                this.attachAddPointListener();
+
+                // App.Interactions.Graphs.CoordinateSystem.Circle.Behaviors.Styles
+                // Disabled for Phase I
+                // this.transformActivePoints(this.pointsAreOpen);
+            },
+        }]
+    });
+</script>

@@ -1,0 +1,105 @@
+<!--
+`App.Interactions.Graphs.CoordinateSystem.Segment.Behaviors.Groups` is caring about the
+
+1. Creating the group cofigurations for segments
+
+```
+<g>
+    <circle></circle>
+    <line></line>
+    <circle></circle>
+</g>
+```
+-->
+<link rel="import" href="../../../../scripts/namespace.html">
+
+<!-- D3 plugins -->
+<link rel="import" href="../../plugins/d3-filters/d3-filter-points-collection.html">
+<!-- D3 plugins -->
+
+<link rel="import" href="../../../behaviors/graphing-interactions/GeometricFigures/D3Circle.html">
+
+<!--
+Shared properties
+1. this.containerDotsWithLineConnection
+-->
+<link rel="import" href="CoordinateSystemSegmentSharedPropertiesBehavior.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Segment.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.Groups = [
+            App.Interactions.Graphs.D3.GeometricFigures.Behaviors.Circle,
+
+            App.Interactions.Graphs.CoordinateSystem.Segment.Behaviors.SharedProperties, {
+
+            /**
+             * Each segment has two circles and line and these object should be
+             * wrapped at `g` element
+             *
+             * @param {Array} collection
+             */
+            createGroupsBySegmentsDots: function(dots) {
+                var startingPoints =
+                    this.d3.createCollectionOnlyByStartingPoints(dots);
+
+                this.containerDotsWithLineConnection
+                    .selectAll('g')
+                        .data(startingPoints)
+                    .enter()
+                        .append('g');
+            },
+
+            /**
+             * Method is drawing the dots collection, selecting the parent `g` tag
+             * The output should be:
+             *
+             * ```
+             * <g>
+             *   ...
+             *   <circle></circle>
+             *   ..
+             * </g>
+             * ```
+             *
+             * @see https://bl.ocks.org/dimitardanailov/bb12fef05c5ed56e793728ed8e84bb81
+             *
+             * @param {D3Object} circleContainer
+             * @param {Array} dots
+             * @param {Object} properties
+             */
+            drawSegmentCirclesInGroups: function(container, dots, properties) {
+                if (typeof properties !== 'object') {
+                    throw 'properties attribute should be object';
+                }
+
+                var endPointsData = this.d3.divideToStartingAndEndPoints(dots);
+
+                var group,
+                    tempPoints,
+                    self = this;
+                container.selectAll('g').each(function(d, i) {
+                    if (endPointsData['marker-start'].hasOwnProperty(i) ||
+                        endPointsData['marker-end'].hasOwnProperty(i)) {
+
+                        tempPoints = [];
+
+                        if (endPointsData['marker-start'].hasOwnProperty(i)) {
+                            tempPoints.push(endPointsData['marker-start'][i]);
+                        }
+
+                        if (endPointsData['marker-end'].hasOwnProperty(i)) {
+                            tempPoints.push(endPointsData['marker-end'][i]);
+                        }
+
+                        group = self.d3.select(this);
+
+                        // App.Interactions.Graphs.D3.GeometricFigures.Behaviors.Circle
+                        self.drawCircles(group, tempPoints, properties);
+                    }
+                });
+            },
+        }];
+    });
+</script>

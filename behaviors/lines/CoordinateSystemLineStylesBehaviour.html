@@ -1,0 +1,245 @@
+<link rel="import" href="../../../../scripts/namespace.html">
+
+<link rel="import" href="../../../../behaviors/collections/ObjectBehavior.html">
+
+<link rel="import" href="../../../behaviors/graphing-interactions/D3StylesBehaviour.html">
+
+<link rel="import" href="../CoordinateSystemToolbarBehaviour.html">
+<link rel="import" href="../styles/CoordinateSystemActiveItemStyleBehaviour.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Line.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.Styles = [
+            App.Collections.Behaviors.Object,
+
+            App.Interactions.Graphs.D3.Behaviors.Styles,
+
+            App.Interactions.Graphs.CoordinateSystem.Behaviors.ToolBar,
+            App.Interactions.Graphs.CoordinateSystem.Styles.Behaviors.ActiveItem, {
+
+            /**
+             * @return {Array}
+             */
+            getShadeToGridButtonNames: function() {
+                return [
+                    this.getLineShadeToGridButtonName(),
+                    this.getLineRemoveShadeToGridButtonName()
+                ];
+            },
+
+            /**
+             * @return {String}
+             */
+            getLineShadeToGridButtonName: function() {
+                return 'lineShadeToGrid';
+            },
+
+            getLineRemoveShadeToGridButtonName: function() {
+                return 'lineRemoveShadeToGrid';
+            },
+
+            /*** Constants ***/
+
+            /**** QTI ****/
+
+            /**
+             * @param {Object} styles
+             */
+            updateNormalLineStyles: function(styles) {
+                // line: stroke and marker fill
+                if (styles.stroke !== null) {
+                    this.customStyle['--coordinate-system-line-stroke'] =
+                        styles.stroke;
+                }
+
+                // line: stroke width
+                if (styles.strokeLineWidth !== null) {
+                    this.customStyle['--coordinate-system-line-stroke-width'] =
+                        styles.strokeLineWidth;
+                }
+
+                // Override the default styles
+                this.updateStyles();
+            },
+
+            updateHoverLineStyles: function(styles) {
+                // line: stroke and marker fill
+                if (styles.stroke !== null) {
+                    this.customStyle['--coordinate-system-active-line-stroke'] =
+                        styles.stroke;
+                }
+
+                // line: stroke width
+                if (styles.strokeLineWidth !== null) {
+                    this.customStyle['--coordinate-system-active-line-stroke-width'] =
+                        styles.strokeLineWidth;
+                }
+
+                // Override the default styles
+                this.updateStyles();
+            },
+            /**** QTI ****/
+
+            /**
+             * @param {D3Object} line
+             * @param {Object} backendAttributes
+             */
+            toggleLineState: function(line) {
+                // App.Interactions.Graphs.CoordinateSystem.Styles.Behaviors.ActiveItem
+                var hasActiveClassName = this.toggleItemState(line);
+
+                // Deactivate at the active item from same sequence
+                if (hasActiveClassName) {
+                    // Remove the active class name if this is necessary
+                    this.deactiveActiveLines(line);
+
+                    // line.attr('filter', 'url(#dropshadow)')
+
+                    // Update the marker settings
+                    this.__updateLineMarkers(line, 'active');
+
+                    // Enable the shade to grid option
+                    // App.Interactions.Graphs.CoordinateSystem.Behaviors.ToolBar
+                    this.loadDefaultStylesFilteringByDrawingGraphButtons(
+                        [this.getLineShadeToGridButtonName()]
+                    );
+                    this.disabledUiConnectedButtons(this.getLineShadeToGridButtonName());
+                } else {
+                    line.attr('filter', null)
+
+                    // Update the marker settings
+                    this.__updateLineMarkers(line, 'normal');
+
+                    this.drawingLineRollbackToolbarStyles();
+                }
+            },
+
+            drawingLineRollbackToolbarStyles: function() {
+                // Disable the shade to grid and remove shade to grid
+                // App.Interactions.Graphs.CoordinateSystem.Behaviors.ToolBar
+                this.enableUiConnectedButtons(this.getLineShadeToGridButtonName());
+                this.loadInactiveStylesilteringByDrawingGraphButtons(
+                    this.getShadeToGridButtonNames()
+                );
+            },
+
+            /**
+             * Method is updating which line is active
+             * This is method is using by dragging behaviors
+             *
+             * @param {D3Element} line
+             */
+            setActiveDrawingLine: function(line) {
+                this.deactiveActiveLines(line);
+
+                // Add a active items
+                line
+                    .attr({
+                        'marker-start': 'url(#line-active-marker-start)',
+                        'marker-end': 'url(#line-active-marker-end)'
+                    })
+                    // App.Interactions.Graphs.CoordinateSystem.Styles.Behaviors.ActiveItem
+                    .classed(this.getActiveClassName(), true);
+            },
+
+            /**** Transformation ****/
+
+            /**
+             * @param {Number} lineDashFactor
+             */
+            transformActiveLines: function(lineDashFactor) {
+                var items = this.containerLines
+                    .selectAll('.' + this.getDrawingLineClassNameContainer())
+                        .selectAll('line');
+
+                // App.Interactions.Graphs.D3.GeometricFigures.Behaviors.Line
+                this.changeActiveLineData(
+                    lineDashFactor,
+                    items,
+                    this.coordinateResponseData.lines
+                );
+            },
+            /**** Transformation ****/
+
+            /**** Markers ****/
+
+            /**
+             * Method is removing the active class name if this necessary
+             * Only one line could be active
+             *
+             * @param {D3Object}
+             */
+            deactiveActiveLines: function(line) {
+                var backendAttributes = line.datum();
+
+                // App.Interactions.Graphs.CoordinateSystem.Styles.Behaviors.ActiveItem
+                var activeItemClassName = this.getActiveClassName();
+
+                var self = this;
+                this.containerLines
+                    .selectAll('.' + this.getDrawingLineClassNameContainer())
+                        .selectAll('.' + activeItemClassName)
+                            .filter(function(d) {
+                                return (!self.objectsAreEqual(d, backendAttributes));
+                            })
+                            .attr('class', function() {
+                                // App.Interactions.Graphs.D3.Behaviors.Styles
+                                return self.removeD3CssClass(this, activeItemClassName);
+                            })
+                            .attr('filter', null)
+                            .attr('marker-start', 'url(#line-normal-marker-start)')
+                            .attr('marker-end', 'url(#line-normal-marker-end)');
+            },
+
+            removeAllDrawingActiveItems: function() {
+                /**
+                 * Remove the active class name by line collection
+                 * App.Interactions.Graphs.CoordinateSystem.Styles.Behaviors.ActiveItem
+                 */
+                this.removeActiveStylesByD3Collection(this.containerLines);
+
+                // Remove active markers
+                var tempLines = this.containerLines
+                    .selectAll('.' + this.getDrawingLineClassNameContainer())
+                        .selectAll('line');
+
+                this.removeLineActiveMarkersSettings(tempLines);
+            },
+
+            /**
+             * @param {D3ArrayItem} lines
+             */
+            removeLineActiveMarkersSettings: function(lines) {
+                var self = this;
+                var line;
+                lines.each(function() {
+                    line = self.d3.select(this);
+
+                    self.__updateLineMarkers(line, 'normal');
+                });
+            },
+
+            /**
+             * @param {D3Item} line
+             */
+            __updateLineMarkers: function(line, prefix) {
+                line.attr('marker-start', 'url(#line-' + prefix + '-marker-start)');
+                line.attr('marker-end', 'url(#line-' +  prefix + '-marker-end)');
+            },
+
+            /**** Markers ****/
+
+            /**** Graph buttons ****/
+            enableGraphButtonLineRemoveShadeToGrid: function() {
+                var buttons = [this.getLineRemoveShadeToGridButtonName()];
+
+                // Enable the shade to grid from line
+                // App.Interactions.Graphs.CoordinateSystem.Behaviors.ToolBar
+                this.loadDefaultStylesFilteringByDrawingGraphButtons(buttons);
+            }
+            /**** Graph buttons ****/
+        }]
+    });
+</script>

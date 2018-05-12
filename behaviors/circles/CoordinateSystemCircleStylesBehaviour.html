@@ -1,0 +1,91 @@
+<link rel="import" href="../../../../scripts/namespace.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Circle.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.Styles = {
+
+            /**** QTI ****/
+            /**
+             * @param {Object} styles
+             */
+            updatePointStyles: function(styles) {
+                // Update the radius
+                // @see App.Interactions.Graphs.D3.Behaviors.Base
+                this.settings.dots.radius = this.updateD3VariableWithQtiVariable(
+                    styles.radius,
+                    this.settings.dots.radius
+                );
+
+                // circle: fill
+                if (styles.fill !== null) {
+                    this.customStyle['--coordinate-system-circle-fill'] = styles.fill;
+                }
+
+                // circle: stroke
+                if (styles.stroke !== null) {
+                    this.customStyle['--coordinate-system-circle-stroke'] = styles.stroke;
+                }
+
+                // circle: stroke width
+                if (styles.strokeWidth !== null) {
+                    this.customStyle['--coordinate-system-circle-stroke-width'] = styles.strokeWidth;
+                }
+            },
+
+            /**
+             * @param {Object} styles
+             */
+            updatePointMouseOverStyles: function(styles) {
+                // circle: fill
+                if (styles.fill !== null) {
+                    this.customStyle['--coordinate-system-active-circle-fill'] = styles.fill;
+                }
+
+                // circle: stroke
+                if (styles.stroke !== null) {
+                    this.customStyle['--coordinate-system-active-circle-stroke'] = styles.stroke;
+                }
+            },
+            /**** QTI ****/
+
+            /**
+             * @param {Object} circle
+             * @param {Number} index
+             */
+            togglePointState: function(circle, index) {
+                // App.Interactions.Graphs.CoordinateSystem.Styles.Behaviors.ActiveItem
+                var hasActiveClassName = this.toggleItemState(circle);
+
+                // Deactivate at the active item from same sequence
+                if (hasActiveClassName) {
+                    // App.Interactions.Graphs.CoordinateSystem.Styles.Behaviors.ActiveItem
+                    this.deactiveItemBySequince(
+                        this.containerDots, // d3 collection
+                        'circle', // selector
+                        [index] // these indexes should be excluded by d3 filter
+                    );
+                }
+            },
+
+            /**** Transformation ****/
+
+            /**
+             * @param {Boolean} pointsAreOpen
+             */
+            transformActivePoints: function(pointsAreOpen) {
+                var items = this.containerDots.selectAll('circle');
+
+                // App.Interactions.Graphs.D3.GeometricFigures.Behaviors.Circle
+                this.changeActiveCircleData(
+                    pointsAreOpen,
+                    items,
+                    this.coordinateResponseData.dots
+                );
+            },
+
+            /**** Transformation ****/
+        }
+    });
+</script>

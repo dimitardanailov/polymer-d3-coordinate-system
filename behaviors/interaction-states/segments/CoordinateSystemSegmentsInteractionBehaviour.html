@@ -1,0 +1,136 @@
+<!--
+`App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.SegmentInteraction`
+remove the previous svg listeners and prepare the system for drawing (transforming, etc) a segment
+-->
+
+<link rel="import" href="../../../../../scripts/namespace.html">
+
+<!--
+Shared properties:
+1. lineDashFactor
+2. pointsAreOpen
+-->
+<link rel="import" href="../../CoordinateSystemSharedPropertiesBehaviour.html">
+
+<link rel="import" href="../../segments/CoordinateSystemSegmentBehaviour.html">
+<link rel="import" href="../../segments/CoordinateSystemSegmentStylesBehaviour.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.SegmentInteraction = [
+            App.Interactions.Graphs.CoordinateSystem.Behaviors.SharedProperties,
+            App.Interactions.Graphs.CoordinateSystem.Segment.Behaviors.Segment,
+            App.Interactions.Graphs.CoordinateSystem.Segment.Behaviors.Styles, {
+
+            properties: {
+                interactionState: {
+                    type: String,
+                    value: null
+                },
+            },
+
+            getSolidSegmentWithClosedPointsInteractionState: function() {
+                return 'addSolidSegmentWithClosedPoints';
+            },
+
+            getSolidSegmentWithOpenPointsInteractionState: function() {
+                return 'addSolidSegmentWithOpenPoints';
+            },
+
+            getDashedSegmentWithClosedPointsInteractionState: function() {
+                return 'addDashedSegmentWithClosedPoints';
+            },
+
+            getDashedSegmentWithOpenPointsInteractionState: function() {
+                return 'addDashedSegmentWithOpenPoints';
+            },
+
+            /**
+             * State: solid line and closed points
+             */
+            setSolidSegmentWithClosedPointsInteractionState: function() {
+                // Change the interaction state
+                this.interactionState = this.getSolidSegmentWithClosedPointsInteractionState();
+
+                // Set the dashed factor to be equal to zero
+                this.lineDashFactor = 0;
+
+                // Set the open points configurations
+                this.pointsAreOpen = false;
+
+                this.__loadAddSegmentInteractionSettings();
+            },
+
+            /**
+             * State: solid line and open points
+             */
+            setSolidSegmentWithOpenPointsInteractionState: function() {
+                // Change the interaction state
+                this.interactionState = this.getSolidSegmentWithOpenPointsInteractionState();
+
+                // Set the dashed factor to be equal to zero
+                this.lineDashFactor = 0;
+
+                // Set the open points configurations
+                this.pointsAreOpen = true;
+
+                this.__loadAddSegmentInteractionSettings();
+            },
+
+            /**
+             * State: dashed line and closed points
+             */
+            setDashedSegmentWithClosedPointsInteractionState: function() {
+                // Change the interaction state
+                this.interactionState = this.getDashedSegmentWithClosedPointsInteractionState();
+
+                // Set the dashed factor
+                this.lineDashFactor = 5;
+
+                // Set the open points configurations
+                this.pointsAreOpen = false;
+
+                this.__loadAddSegmentInteractionSettings();
+            },
+
+            /**
+             * State: dashed line and open points
+             */
+            setDashedSegmentWithOpenPointsInteractionState: function() {
+                // Change the interaction state
+                this.interactionState = this.getDashedSegmentWithOpenPointsInteractionState();
+
+                // Set the dashed factor
+                this.lineDashFactor = 5;
+
+                // Set the open points configurations
+                this.pointsAreOpen = true;
+
+                this.__loadAddSegmentInteractionSettings();
+            },
+
+            callSegmentsHistoryState: function() {
+                // App.Interactions.Graphs.CoordinateSystem.Segment.Behaviors.Segment
+                this.reDrawSegments();
+            },
+
+            /**
+             * Method is loading the default configurations for drawing type segment
+             */
+            __loadAddSegmentInteractionSettings: function() {
+                // Destroy all event listeners
+                this.destroyCoordinateSystemListeners();
+
+                // Attach event listener (Draw circle with line coonection)
+                // App.Interactions.Graphs.CoordinateSystem.Segment.Behaviors.Segment
+                this.attachAddPointWithLineConnectionListener();
+
+                // App.Interactions.Graphs.CoordinateSystem.Segment.Behaviors.Styles
+                // Disabled for Phase I
+                // this.transformActiveSegments(this.pointsAreOpen, this.lineDashFactor);
+            },
+        }]
+    });
+</script>

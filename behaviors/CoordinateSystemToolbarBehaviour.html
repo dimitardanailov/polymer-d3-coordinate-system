@@ -1,0 +1,389 @@
+<link rel="import" href="../../../scripts/namespace.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.ToolBar = {
+
+            properties: {
+                /**
+                 * @property is storing information about the
+                 * all available buttons / interaction states
+                 */
+                graphButtons: {
+                    type: Object,
+                    value: {
+                        reset: null,
+
+                        /*** Points ***/
+                        addClosedPoint: null,
+                        addOpenPoint: null,
+
+                        /*** Lines ***/
+                        addSolidLine: null,
+                        addDashedLine: null,
+                        lineShadeToGrid: null,
+                        lineRemoveShadeToGrid: null,
+
+                        /*** Segments ***/
+                        addSolidSegmentWithClosedPoints: null,
+                        addSolidSegmentWithOpenPoints: null,
+                        addDashedSegmentWithClosedPoints: null,
+                        addDashedSegmentWithOpenPoints: null,
+
+                        /*** Rays ***/
+                        addSolidRayWithClosedPoints: null,
+                        addSolidRayWithOpenPoints: null,
+                        addDashedRayWithClosedPoints: null,
+                        addDashedRayWithOpenPoints: null,
+
+                        removeItem: null,
+
+                        undo: null,
+                        redo: null
+                    }
+                },
+            },
+
+            /**** Initializers ****/
+
+            /**
+             * Update which graph buttons are available
+             */
+            initializeToolbarGraphButtons: function() {
+                // @see http://stackoverflow.com/questions/31133767/accessing-elements-inside-dom-repeat-in-attached
+                this.async(function() {
+                    var buttons = Polymer.dom(this.querySelectorAll('graph-button'));
+
+                    var isValid = this.__buttonsAreValid(buttons);
+
+                    if (isValid) {
+                        var button, type;
+                        for (var i = 0; i < buttons.node.length; i++) {
+                            button = buttons.node[i];
+                            type = button.getAttribute('type')
+
+                            if (this.graphButtons.hasOwnProperty(type)) {
+                                // Create connection between custom interaction and
+                                // each graph-button.
+                                button.setGraphingToolInteraction(this);
+                                button.setState(type);
+
+                                this.graphButtons[type] = button;
+                            }
+                        }
+                    }
+                });
+            },
+            /**** Initializers ****/
+
+            /**
+             * @param {String} type
+             */
+            resetCurrentWork: function(type) {
+                if (this.graphButtons.hasOwnProperty(type) && this.graphButtons[type] !== null) {
+                    var graphButton = this.graphButtons[type];
+
+                    // Emergency exit
+                    if (graphButton.getIsInactive() || graphButton.getUiToolBarIsActive()) {
+                        return;
+                    }
+
+                    var conformationDialogResponse = confirm('Are you sure ?');
+
+                    if (conformationDialogResponse) {
+                        this.__loadDefaultStyles(type);
+
+                        // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.BaseInteraction
+                        this.setInteractionState(type);
+                    }
+                }
+            },
+
+            /**
+             * @see App.Interactions.GraphingTool.Behaviors.CoordinateSystemInteraction.BaseInteraction
+             *
+             * @param {String} type
+             */
+            toggleButtonStyleAndState: function(type) {
+                if (this.graphButtons.hasOwnProperty(type)) {
+                    var graphButton = this.graphButtons[type];
+
+                    // Emergency exit
+                    if (graphButton.getIsInactive() || graphButton.getUiToolBarIsActive()) {
+                        return;
+                    }
+
+                    graphButton.updateIsActive();
+
+                    // Update the coordinates system event listeners and configurations
+                    // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.BaseInteraction
+                    this.setInteractionState(type);
+                }
+            },
+
+            /**
+             * @param {String} currentState
+             */
+            updateGraphButtonsStyle: function(currentState) {
+                var keys = Object.keys(this.graphButtons);
+                var key, button, stateIsValid;
+
+                for (var i = 0; i < keys.length; i++) {
+                    key = keys[i];
+
+                    button = this.graphButtons[key];
+                    if (button !== null) {
+                        if (button.getState() !== currentState && !button.getIsInactive()) {
+                            button.revertDefaultStyle();
+                        }
+                    }
+                }
+            },
+
+            /**
+             * @param {String} type
+             */
+            loadButtonActiveStyle: function(type) {
+                if (this.graphButtons.hasOwnProperty(type)) {
+                    this.graphButtons[type].setNormalState();
+                }
+            },
+
+            /**
+             * Each grap button has a default state
+             * Default state could be: normal or inactive
+             * @example lineShadeToGrid is activated only after line selection
+             *
+             * @param {String} buttonName e.g `lineShadeToGrid`, `addSolidLine`
+             */
+            loadGraphButtonDefaultStateByName: function(buttonName) {
+                var buttonIsValid = this.__graphButtonIsValid(buttonName);
+
+                if (!buttonIsValid) {
+                    return;
+                }
+
+                var graphButton = this.graphButtons[buttonName];
+
+                if (graphButton.hasNormalState()) {
+                    graphButton.turnOffInactive();
+                } else {
+                    graphButton.turnOnInactive();
+                }
+            },
+
+            /**
+             * @param {String} buttonName e.g `lineShadeToGrid`, `addSolidLine`
+             */
+            loadGraphButtonInactiveStateByName: function(buttonName) {
+                var buttonIsValid = this.__graphButtonIsValid(buttonName);
+
+                if (!buttonIsValid) {
+                    return;
+                }
+
+                var graphButton = this.graphButtons[buttonName];
+                graphButton.turnOnInactive();
+            },
+
+            /**
+             * Method is turn off inactive styles for multiple buttons
+             * This is necessary when:
+             * 1. The student is able to delete different drawing object types:
+             *  - Points
+             *  - Lines
+             *  - Segments
+             *  - Rays
+             * 2. Shade to grid
+             *
+             * @param {StringArray} drawingGraphButtons e.g `addClosedPoint`, `addOpenPoint`
+             */
+            loadDefaultStylesFilteringByDrawingGraphButtons: function(drawingGraphButtons) {
+                var key, graphButton;
+                for (var i = 0; i < drawingGraphButtons.length; i++) {
+                    key = drawingGraphButtons[i];
+                    if (this.graphButtons.hasOwnProperty(key)) {
+                        graphButton = this.graphButtons[key];
+
+                        if (graphButton !== null) {
+                            graphButton.turnOffInactive();
+                        }
+                    }
+                }
+            },
+
+            /**
+             * Method is turn on inactive styles for multiple buttons
+             *
+             * @param {StringArray} drawingGraphButtons e.g `lineShadeToGrid`, `lineRemoveShadeToGrid`
+             */
+            loadInactiveStylesilteringByDrawingGraphButtons: function(drawingGraphButtons) {
+                var key, graphButton;
+                for (var i = 0; i < drawingGraphButtons.length; i++) {
+                    key = drawingGraphButtons[i];
+                    if (this.graphButtons.hasOwnProperty(key)) {
+                        graphButton = this.graphButtons[key];
+
+                        if (graphButton !== null) {
+                            graphButton.turnOnInactive();
+                        }
+                    }
+                }
+            },
+
+            /**
+             * @param {String} groupName
+             * @param {String} state default or inactive
+             */
+            updateLinkedButtonsByGroupName: function(groupName, state) {
+                // @see http://stackoverflow.com/questions/31133767/accessing-elements-inside-dom-repeat-in-attached
+                this.async(function() {
+                    var graphButtons = this.graphButtons;
+                    var keys = Object.keys(this.graphButtons).filter(function(key) {
+                        return graphButtons[key] !== null && graphButtons[key].getGroupName() === groupName;
+                    });
+
+                    var key;
+                    for (var i = 0; i < keys.length; i++) {
+                        key = keys[i];
+                        switch (state) {
+                            case 'default':
+                                this.__loadButtonDefaultState(this.graphButtons[key]);
+                                break;
+                            case 'inactive':
+                                this.graphButtons[key].turnOnInactive();
+                                break;
+                        }
+                    }
+                });
+            },
+
+            /**
+             * Method is find a grap button by state (key name)
+             * If this buttons exists, method is trying to turn on inactive mode
+             * for all linkedButtons
+             *
+             * @param {String} state
+             */
+            inactiveLinkedButtons: function(state) {
+                if (this.graphButtons.hasOwnProperty(state)) {
+                    var graphButton = this.graphButtons[state];
+                    var linkedButtons = graphButton.getLinkedButtons();
+
+                    var keys = this.__getValidGraphButtonKeys(linkedButtons);
+
+                    var key;
+                    for (var i = 0; i < keys.length; i++) {
+                        key = keys[i];
+                        this.graphButtons[key].turnOnInactive();
+                    }
+                }
+            },
+
+            /**** UI Connected Buttons ***/
+
+            enableUiConnectedButtons: function(state) {
+                this.toggleUiConnectedButtons(state, false);
+            },
+
+            disabledUiConnectedButtons: function(state) {
+                this.toggleUiConnectedButtons(state, true);
+            },
+
+            /**
+             * @param {String} state which state is active
+             * @param {Boolean} operation true (Inactive ui connected buttons)
+             */
+            toggleUiConnectedButtons: function(state, operation) {
+                if (this.graphButtons.hasOwnProperty(state)) {
+                    var graphButton = this.graphButtons[state];
+                    var uiConnectedButtons = graphButton.getUiConnectedButtons();
+
+                    var keys = this.__getValidGraphButtonKeys(uiConnectedButtons);
+
+                    var key;
+                    for (var i = 0; i < keys.length; i++) {
+                        key = keys[i];
+                        if(this.graphButtons[key]){
+                            this.graphButtons[key]['uiToolBarIsActive'] = operation;
+                        }
+                    }
+                }
+            },
+
+            /**
+             * Method is loading default state for other graph buttons
+             *
+             * @param {String} type
+             */
+            __loadDefaultStyles: function(type) {
+                var type = event.model.item.type;
+
+                // Get all available interaction states
+                var keys = Object.keys(this.graphButtons);
+                var key, graphButton;
+
+                for (var i = 0; i < keys.length; i++) {
+                    key = keys[i];
+
+                    if (type !== key) {
+                        graphButton = this.graphButtons[key];
+
+                        if (graphButton !== null) {
+                            graphButton.uiToolBarIsActive = null;
+                            this.__loadButtonDefaultState(graphButton);
+                        }
+                    }
+                }
+            },
+
+            /**
+             * @param {PolymerDOMItem} graphButton
+             */
+            __loadButtonDefaultState: function(graphButton) {
+                // Disable inactive state
+                if (graphButton !== null) {
+                    if (graphButton.hasNormalState()) {
+                        graphButton.turnOffInactive();
+                    } else {
+                        graphButton.turnOnInactive();
+                    }
+                }
+            },
+
+            /**
+             * The button is valid if exists and have definition
+             *
+             * @param {String} buttonName
+             */
+            __graphButtonIsValid: function(buttonName) {
+                if (this.graphButtons.hasOwnProperty(buttonName) && this.graphButtons[buttonName] !== null) {
+                    return true;
+                } else {
+                    return false;
+                }
+            },
+
+            /**
+             * @param {String} array
+             */
+            __getValidGraphButtonKeys: function(array) {
+                var self = this;
+                return array.filter(function(key) {
+                    return  self.graphButtons.hasOwnProperty(key);
+                });
+            },
+
+            /**
+             * @param {Object} buttons
+             */
+            __buttonsAreValid: function(buttons) {
+                var isValid = (typeof buttons === 'object' && buttons.hasOwnProperty('node'));
+
+                return isValid;
+            },
+        };
+    });
+</script>

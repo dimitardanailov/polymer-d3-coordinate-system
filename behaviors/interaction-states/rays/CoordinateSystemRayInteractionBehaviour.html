@@ -1,0 +1,136 @@
+<!--
+`App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.RayInteraction`
+remove the previous svg listeners and prepare the system for drawing (transforming, etc) a ray
+-->
+
+<link rel="import" href="../../../../../scripts/namespace.html">
+
+<!--
+Shared properties:
+1. lineDashFactor
+2. pointsAreOpen
+-->
+<link rel="import" href="../../CoordinateSystemSharedPropertiesBehaviour.html">
+
+<link rel="import" href="../../rays/CoordinateSystemRayBehaviour.html">
+<link rel="import" href="../../rays/CoordinateSystemRayStylesBehaviour.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.RayInteraction = [
+            App.Interactions.Graphs.CoordinateSystem.Behaviors.SharedProperties,
+            App.Interactions.Graphs.CoordinateSystem.Ray.Behaviors.Ray,
+            App.Interactions.Graphs.CoordinateSystem.Ray.Behaviors.Styles, {
+
+            properties: {
+                interactionState: {
+                    type: String,
+                    value: null
+                },
+            },
+
+            getSolidRayWithClosedPointsInteractionState: function() {
+                return 'addSolidRayWithClosedPoints';
+            },
+
+            getSolidRayWithOpenPointsInteractionState: function() {
+                return 'addSolidRayWithOpenPoints';
+            },
+
+            getDashedRayWithClosedPointsInteractionState: function() {
+                return 'addDashedRayWithClosedPoints';
+            },
+
+            getDashedRayWithOpenPointsInteractionState: function() {
+                return 'addDashedRayWithOpenPoints';
+            },
+
+            /**
+             * State: solid line and closed points
+             */
+            setSolidRayWithClosedPointsInteractionState: function() {
+                // Change the interaction state
+                this.interactionState = this.getSolidRayWithClosedPointsInteractionState();
+
+                // Set the dashed factor to be equal to zero
+                this.lineDashFactor = 0;
+
+                // Set the open points configurations
+                this.pointsAreOpen = false;
+
+                this.__loadAddRayInteractionSettings();
+            },
+
+            /**
+             * State: solid line and open points
+             */
+            setSolidRayWithOpenPointsInteractionState: function() {
+                // Change the interaction state
+                this.interactionState = this.getSolidRayWithOpenPointsInteractionState();
+
+                // Set the dashed factor to be equal to zero
+                this.lineDashFactor = 0;
+
+                // Set the open points configurations
+                this.pointsAreOpen = true;
+
+                this.__loadAddRayInteractionSettings();
+            },
+
+            /**
+             * State: dashed line and closed points
+             */
+            setDashedRayWithClosedPointsInteractionState: function() {
+                // Change the interaction state
+                this.interactionState = this.getDashedRayWithClosedPointsInteractionState();
+
+                // Set the dashed factor to be equal to zero
+                this.lineDashFactor = 5;
+
+                // Set the open points configurations
+                this.pointsAreOpen = false;
+
+                this.__loadAddRayInteractionSettings();
+            },
+
+             /**
+              * State: dashed line and closed points
+              */
+            setDashedRayWithOpenPointsInteractionState: function() {
+                // Change the interaction state
+                this.interactionState = this.getDashedRayWithOpenPointsInteractionState();
+
+                // Set the dashed factor to be equal to zero
+                this.lineDashFactor = 5;
+
+                // Set the open points configurations
+                this.pointsAreOpen = true;
+
+                this.__loadAddRayInteractionSettings();
+            },
+
+            callRaysHistoryState: function() {
+                // App.Interactions.Graphs.CoordinateSystem.Ray.Behaviors.Ray
+                this.reDrawRays();
+            },
+
+            /**
+             * Method is loading the default configurations for drawing type ray
+             */
+            __loadAddRayInteractionSettings: function() {
+                // Destroy all event listeners
+                this.destroyCoordinateSystemListeners();
+
+                // Attach event listener (Draw circle with end ray)
+                // App.Interactions.Graphs.CoordinateSystem.Ray.Behaviors.Ray
+                this.attachAddRayListener();
+
+                // App.Interactions.Graphs.CoordinateSystem.Ray.Behaviors.Styles
+                // Disabled for Phase I
+                // this.transformActiveRays(this.pointsAreOpen, this.lineDashFactor);
+            },
+        }]
+    });
+</script>

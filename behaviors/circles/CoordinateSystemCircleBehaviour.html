@@ -1,0 +1,350 @@
+<link rel="import" href="../../../../scripts/namespace.html">
+
+<!-- d3 plugins -->
+<link rel="import" href="../../plugins/d3-collections/d3-collections.html">
+<!-- d3 plugins -->
+
+<link rel="import" href="../CoordinateSystemSharedPropertiesBehaviour.html">
+<link rel="import" href="../CoordinateSystemRemoveItemBehaviour.html">
+<link rel="import" href="../CoordinateSystemToolbarBehaviour.html">
+
+<link rel="import" href="../interaction-states/CoordinateSystemInteractionBehaviour.html">
+
+<link rel="import" href="../styles/CoordinateSystemActiveItemStyleBehaviour.html">
+<link rel="import" href="../styles/CoordinateSystemCircleStyleBehaviour.html">
+
+<!--
+Shared properties:
+1. containerDots
+-->
+<link rel="import" href="CoordinateSystemCircleSharedPropertiesBehavior.html">
+<link rel="import" href="CoordinateSystemCircleStylesBehaviour.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Circle.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.Circle = [
+            App.Interactions.Graphs.D3.Behaviors.Base,
+            App.Interactions.Graphs.D3.Behaviors.Corrections,
+            App.Interactions.Graphs.D3.GeometricFigures.Behaviors.Circle,
+
+            App.Interactions.Graphs.CoordinateSystem.Behaviors.CoordinateSysteRemoveItem,
+            App.Interactions.Graphs.CoordinateSystem.Behaviors.SharedProperties,
+            App.Interactions.Graphs.CoordinateSystem.Behaviors.ToolBar,
+
+            App.Interactions.Graphs.CoordinateSystem.Circle.Behaviors.Styles,
+            // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.BaseInteraction,
+            App.Interactions.Graphs.CoordinateSystem.Styles.Behaviors.ActiveItem,
+            App.Interactions.Graphs.CoordinateSystem.Styles.Behaviors.Circle,
+
+            App.Interactions.Graphs.CoordinateSystem.Circle.Behaviors.SharedProperties, {
+
+            properties: {
+            },
+            /***** INITIALIZERS *****/
+            initializeMathematicalPoints: function() {
+                // Main container
+                this.initializeContainerDots();
+
+                // Transform qti drawing settings to d3js configurations
+                this.transformQtiPointSettingsToD3Configurations();
+
+                // Draw backend points
+                this.drawQTIXMLDots();
+            },
+
+            initializeContainerDots: function() {
+                this.containerDots = this.containerTempObjects
+                    .append('g')
+                    .attr('class', this.settings.dots.containerClassName);
+            },
+            /***** INITIALIZERS *****/
+
+            /***** QTI  *****/
+
+            /**
+             * Method is overriding the d3js setting with qti configurations
+             */
+            transformQtiPointSettingsToD3Configurations: function() {
+                if (typeof this.coordinateSystemDrawingTypes === 'undefined' || !this.coordinateSystemDrawingTypes.hasOwnProperty('points')) {
+                    return;
+                }
+
+                var settings = this.coordinateSystemDrawingTypes.points;
+
+                // Update the maximumItemsPerPage
+                // @see App.Interactions.Graphs.D3.Behaviors.Base
+                this.settings.dots.maximumItems = this.updateD3VariableWithQtiVariable(
+                    settings.maximumItemsPerPage,
+                    this.settings.dots.maximumItems
+                );
+
+                // Update the normal styles
+                if (settings.hasOwnProperty('styleNormalState') && settings.styleNormalState !== null) {
+                    // @see App.Interactions.Graphs.CoordinateSystem.Circle.Behaviors.Styles
+                    this.updatePointStyles(settings.styleNormalState);
+                }
+
+                // Update the mouse over / hover styles
+                if (settings.hasOwnProperty('styleHoverState') && settings.styleHoverState !== null) {
+                    // @see App.Interactions.Graphs.CoordinateSystem.Circle.Behaviors.Styles
+                    this.updatePointMouseOverStyles(settings.styleHoverState);
+                }
+
+                // Override the default styles
+                this.updateStyles();
+            },
+            /***** QTI *****/
+
+            /***** DRAWING *****/
+            /**
+             * @see https://bl.ocks.org/mbostock/6123708
+             * @see http://bl.ocks.org/hlucasfranca/f133da4493553963e710
+             */
+            drawQTIXMLDots: function() {
+                if (this.coordinateResponseData.dots.length > 0) {
+                    // @see App.Interactions.Graphs.D3.GeometricFigures.Behaviors.Circle
+                    this.convertQTIPointCoordinates(this.coordinateResponseData.dots);
+
+                    this.addCirclesToCoordinateSystem();
+
+                    // Update toolbar state
+                    this.__toggleToolbarPointButtons();
+                }
+            },
+
+            /**
+             * Method is rewriting the necessary dots after undo or redo execution
+             */
+            reDrawCircles: function() {
+                this.containerDots
+                    .selectAll('*')
+                    .remove();
+
+                this.addCirclesToCoordinateSystem();
+
+                // Update toolbar state
+                this.__toggleToolbarPointButtons();
+            },
+
+            addCirclesToCoordinateSystem: function() {
+                // Append dots
+                // App.Interactions.Graphs.D3.GeometricFigures.Behaviors.Circle
+                this.drawCircles(
+                    this.containerDots,
+                    this.coordinateResponseData.dots,
+                    {
+                        'className': this.settings.dots.itemClassName,
+                        'r': this.settings.dots.radius
+                    }
+                );
+
+                // Add onclick event listener
+                this.__addCoordinateSystemCircleOnclickListener();
+            },
+
+            /**
+             * Attach onclick listener for adding a points
+             */
+            attachAddPointListener: function() {
+                var self = this;
+
+                this.svgContainer
+                    .on('click', function() {
+                        self.addPointToCoordinateSystem(this);
+                    });
+            },
+
+            /**
+             * Add only point to CoordinateSystem without any connection
+             *
+             * @param {Object} currentElement
+             *
+             * @see http://bl.ocks.org/hlucasfranca/f133da4493553963e710
+             * @see http://stackoverflow.com/questions/15147136/how-to-know-the-current-zoom-level-in-d3-js
+             */
+            addPointToCoordinateSystem: function(currentElement) {
+                /**
+                 * Remove the active class name by circle collection
+                 * App.Interactions.Graphs.CoordinateSystem.Styles.Behaviors.ActiveItem
+                 */
+                this.removeActiveStylesByD3Collection(this.containerDots);
+
+                if (this.__drawingPointIsEnable()) {
+                    // @see App.Interactions.Graphs.CoordinateSystem.Styles.Behaviors.Circle
+                    var dot = this._onTapGenerateOpenOrClosedPoint(currentElement);
+
+                    // @see App.Interactions.Graphs.D3.Behaviors.Corrections
+                    dot = this._updateCoordinatesWithSnapToGridCorrection(
+                        dot,
+                        this.interactionSettings.snapToGridIsEnable
+                    );
+
+                    // Append dot
+                    this.push('coordinateResponseData.dots', dot);
+
+                    // @see App.Interactions.Graphs.D3.GeometricFigures.Behaviors.Circle
+                    this.drawCircles(
+                        this.containerDots,
+                        this.coordinateResponseData.dots,
+                        {
+                            'className': this.settings.dots.itemClassName,
+                            'r': this.settings.dots.radius
+                        }
+                    );
+
+                    // Add onclick event listener
+                    this.__addCoordinateSystemCircleOnclickListener();
+
+                    if (this.__drawingPointIsEnable()) {
+                        // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.BaseInteraction
+                        this.loadGraphButtonDefaultStyle();
+                    } else {
+                        // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.BaseInteraction
+                        this.setGroupGraphButtonsOnInactive();
+                    }
+
+                } else {
+                    // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.BaseInteraction
+                    this.setGroupGraphButtonsOnInactive();
+                }
+            },
+
+            /**
+             * @return {Boolean} hasEmptySlot
+             */
+            __drawingPointIsEnable: function() {
+                return this.d3.collectionHasEmptySlots(
+                    this.coordinateResponseData.dots,
+                    this.settings.dots.maximumItems
+                );
+            },
+
+            /***** DRAWING *****/
+
+            /***** Toolbar Buttons *****/
+
+            /**
+             * Method is getting an information about which toolbar group should be updated.
+             */
+            getPointToolbarGroupKey: function() {
+                return 'point';
+            },
+
+            /**
+             * Method has an ability to disable or enable point toolbar buttons
+             * If the studen has an ability to draw a point -
+             * Toolbar buttons have status active otherwise inactive
+             *
+             */
+            __toggleToolbarPointButtons: function() {
+                var state;
+                if (this.__drawingPointIsEnable()) {
+                    state = 'default';
+                } else {
+                    state = 'inactive';
+                }
+
+                // App.Interactions.Graphs.CoordinateSystem.Behaviors.ToolBar
+                this.updateLinkedButtonsByGroupName(
+                    this.getPointToolbarGroupKey(),
+                    state
+                );
+            },
+            /***** Toolbar Buttons *****/
+
+            /***** Listeners *****/
+
+            /* On click */
+
+            __addCoordinateSystemCircleOnclickListener: function() {
+                var self = this;
+                var circle;
+                this.containerDots
+                    .selectAll('circle')
+                        .on('click', function(event, index) {
+                            circle = self.d3.select(this);
+                            if (self.interactionState !== self.getRemoveItemState()) {
+                                // App.Interactions.Graphs.CoordinateSystem.Circle.Behaviors.Styles
+                                self.togglePointState(circle, index);
+                            } else {
+                                self.__removePoint(circle);
+                            }
+                        });
+            },
+            /* On click */
+
+            /***** Listeners *****/
+
+            /***** Remove State ****/
+            /**
+             * @param {Object} circle
+             * @param {Number} index
+             */
+            __removePoint: function(circle, index) {
+                // App.Interactions.Graphs.CoordinateSystem.Behaviors.CoordinateSysteRemoveItem
+                this.removeD3Item(circle);
+
+                var index = this.coordinateResponseData.dots.indexOf(circle.datum());
+                this.splice('coordinateResponseData.dots', index, 1);
+
+                // Turn on if this is necessary point / circle graph buttons
+                this.__toggleToolbarPointButtons();
+            },
+            /***** Remove State ****/
+
+            /***** Dummy data *****/
+
+            /**
+             * @see https://bl.ocks.org/mbostock/6123708
+             * @see http://bl.ocks.org/hlucasfranca/f133da4493553963e710
+             */
+            dummyDots: function() {
+                var dots = [
+                    { x: 100, y: 110 },
+                    { x: 83, y: 43 },
+                    { x: 92, y: 28 },
+                    { x: 49, y: 174 },
+                    { x: 51, y: 10 },
+                    { x: 25, y: 98 },
+                    { x: 77, y: 30 },
+                    { x: 20, y: 83 },
+                    { x: 11, y: 63 },
+                    { x:  4, y: 55 },
+                    { x:  0, y:  0 },
+                    { x: 85, y: 100 },
+                    { x: 60, y: 40 },
+                    { x: 70, y: 80 },
+                    { x: 10, y: 20 },
+                    { x: 40, y: 50 },
+                    { x: 25, y: 31 },
+                    { x: 400, y: 410 },
+                    { x: 0, y: 250 },
+                    { x: 0, y: 0 },
+                    { x: 400, y: 0 },
+                    { x: 480, y: 0 },
+                    { x: 250, y: 0 },
+                    { x: 250, y: 125 },
+                    { x: 250, y: 250 },
+                ];
+
+                this.coordinateResponseData.dots = dots;
+
+                // Append dots
+                // App.Interactions.Graphs.D3.GeometricFigures.Behaviors.Circle
+                this.drawCircles(
+                    this.containerDots,
+                    this.coordinateResponseData.dots,
+                    {
+                        'className': this.settings.dots.itemClassName,
+                        'r': this.settings.dots.radius,
+                        // @see App.Interactions.Graphs.D3.GeometricFigures.Behaviors.Circle
+                        'fill-opacity': this.getCircleFillOpacity(this.pointsAreOpen)
+                    }
+                );
+            },
+            /***** Dummy data *****/
+        }]
+    });
+</script>

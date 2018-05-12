@@ -1,0 +1,57 @@
+<link rel="import" href="../../../../scripts/namespace.html">
+
+<script>
+
+    namespace('App.Interactions.Graphs.CoordinateSystem.TextItems.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.Title = {
+            properties: {
+                coordinateSystemTitle: {
+                    type: String,
+                    value: 'My Graph Title'
+                },
+
+                graphTitleSettings: {
+                    type: Object,
+                    value: {
+                        y: 20
+                    }
+                }
+            },
+
+            drawCoordinateSystemTitle: function() {
+                if (this.coordinateSystemTitle.length === 0) {
+                    return;
+                }
+
+                var textAttributes = this.__getCoordinateSystemTitleAttributes();
+                var self = this;
+                this.svgContainer
+                    .append('text')
+                    .attr(textAttributes)
+                    .text(function() {
+                        return self.coordinateSystemTitle;
+                    });
+            },
+
+            /**
+             * @see https://developer.mozilla.org/en/docs/Web/SVG/Attribute/text-anchor
+             */
+            __getCoordinateSystemTitleAttributes: function() {
+                // @see App.Interactions.Graphs.D3.Behaviors.Margin
+                var centerHorizontal = this.calculateHorizontalCenterByMarginProperties();
+
+                var textAttributes = {
+                    'class': 'not-selectable-item',
+                    'text-anchor': 'middle',
+                    'pointer-events': 'none',
+                    x: centerHorizontal,
+                    y: this.graphTitleSettings.y
+                };
+
+                return textAttributes;
+            }
+        };
+    });
+</script>

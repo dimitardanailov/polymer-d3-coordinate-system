@@ -1,0 +1,500 @@
+<link rel="import" href="../../../scripts/namespace.html">
+
+<script>
+    namespace('App.Interactions.Graphs.CoordinateSystem.Behaviors', function(namespace) {
+        'use strict';
+
+        namespace.CoordinateSystem = {
+
+            properties: {
+
+                /**
+                 * @property set the margin default properties
+                 */
+                margin: {
+                    type: Object,
+                    value: {
+                        top: 65,
+                        right: 70,
+                        bottom: 65,
+                        left: 70
+                    }
+                },
+
+                /**
+                 * @property will store axis and lines
+                 */
+                containerLinesAxis: {
+                    type: Object
+                },
+            },
+
+            /**
+             * Method will draw svg coordinate:
+             *
+             * @see https://www.w3.org/TR/SVG/struct.html#NewDocumentOverview
+             * @see https://www.dashingd3js.com/basic-building-blocks
+             */
+            drawCoordinateSystem: function() {
+                /**
+                 * Update the parent elements
+                 * Behavior: App.Interactions.Graphs.D3.Behaviors.Margin
+                 */
+                this.updateParentElementsByMarginProperties();
+
+                // Draw text items
+                this.drawCoordinateSystemTextItems();
+
+                // Create container for axis and lines
+                // Container has zoom behavior
+                this.containerLinesAxis = this.mainGroupContainer.append('g');
+
+                // Add zoom mask to coordinate system
+                this.addZoomBehavior();
+
+                // Draw coordinate system
+                this.drawAxis();
+
+                // Create container for all temp objects
+                // Temp container will be destroyed when reset button is activated.
+                this.initializeTempObjectContainer();
+
+                // App.Interactions.Graphs.CoordinateSystem.InteractionStates.Behaviors.BaseInteraction
+                this.setDefaultState();
+            },
+
+            drawCoordinateSystemTextItems: function() {
+                // Draw the coordinate system title
+                // @see App.Interactions.Graphs.CoordinateSystem.TextItems.Behaviors.Title
+                this.drawCoordinateSystemTitle();
+
+                // Draw the coordinate system labels
+                // @see App.Interactions.Graphs.CoordinateSystem.TextItems.Behaviors.Label
+                this.drawCoordinateSystemLabels();
+            },
+
+            /**
+             * Destoy click listeners
+             */
+            detachClickListeners: function() {
+                this.svgContainer.on('click', null);
+            },
+
+            /**
+             * Destroy all mouse drawing events
+             */
+            detachMouseDrawingListeners: function() {
+                this.svgContainer
+                    .on('mousedown', null)
+                    .on('mouseup', null);
+
+                this.svgContainer
+                    .on('touchstart', null)
+                    .on('touchend', null);
+            },
+
+            initializeTempObjectContainer: function() {
+                this.containerTempObjects = this.containerLinesAxis
+                    .append('g')
+                    .attr('class', this.settings.tempObjectsContainer.defaultClassName);
+
+                // Defs with markers
+                this.initializeDefinitionsMarkers();
+
+                // Lines
+                this.initializeMathematicalLines();
+
+                // Triangles
+                // this.initializesScatterplotTriangleCointainer();
+                // this.drawScatterplots();
+
+                // Segments / Dots with line connection
+                // @see App.Interactions.Graphs.CoordinateSystem.Behaviors.Segment
+                this.initializeContainerDotsWithConnection();
+
+                // Rays
+                // @see App.Interactions.Graphs.CoordinateSystem.Behaviors.Ray
+                this.initializeMathematicalRays();
+
+                // Dots
+                this.initializeMathematicalPoints();
+            },
+
+            /**
+             * @see http://stackoverflow.com/questions/27405377/iterate-over-already-created-nodes-in-d3js/27406494#27406494
+             */
+            destroyTempItems: function() {
+                // Erase object arrays
+                var keys = Object.keys(this.coordinateResponseData);
+                var key;
+                for (var i = 0; i < keys.length; i++) {
+                    key = keys[i];
+
+                    this.set('coordinateResponseData.' + key, []);
+                }
+
+                // Remove all items from Coordinate System.
+                var subItems = this.containerTempObjects.selectAll('g');
+                var self = this;
+                subItems.each(function() {
+                    self.d3.select(this)
+                        .selectAll('*')
+                        .remove();
+                });
+            },
+
+            /**
+             * @see http://bl.ocks.org/hlucasfranca/f133da4493553963e710
+             *
+             * @param {Object} circleContainer
+             */
+            attachCircleHoverEvents: function(circleContainer) {
+                var self = this;
+                circleContainer
+                    .selectAll('circle')
+                        .attr('class', function() {
+                            // @see App.Interactions.Graphs.D3.Behaviors.Styles
+                            return self.addD3CssClass(this, 'circle-hover');
+                        })
+                        .on('mouseover', function(event, circleId) {
+                            self.circleHandleMouseOver(event, this, circleId);
+                        })
+                        .on('mouseout', function(event, circleId) {
+                            self.circleHandleMouseOut(event, this, circleId);
+                        });
+            },
+
+            /**
+             * When user start dragging disable mouseover.
+             *
+             * @see http://bl.ocks.org/hlucasfranca/f133da4493553963e710
+             *
+             * @param {Object} circleContainer
+             */
+            detachCircleHoverEvents: function(circleContainer) {
+                this.destroyTextComponents();
+
+                var self = this;
+                circleContainer
+                    .selectAll('circle')
+                        .attr('class', function() {
+                            // @see App.Interactions.Graphs.D3.Behaviors.Styles
+                            return self.removeD3CssClass(this, 'circle-hover');
+                        })
+                        .on('mouseover', null);
+            },
+
+            /**
+             * Double click zoom is disabled.
+             *
+             * @see https://bl.ocks.org/mbostock/6123708
+             * @see http://stackoverflow.com/questions/11786023/how-to-disable-double-click-zoom-for-d3-behavior-zoom
+             * @see http://bl.ocks.org/linssen/7352810
+             */
+            addZoomBehavior: function() {
+                this.zoom = this.getZoomBehavior();
+
+                this.mainGroupContainer
+                    // .call(this.zoom)
+                    .on('dblclick.zoom', null);
+
+                var self = this;
+                // Add zoom behavior via buttons
+                this.d3.select(this.$.zoomIn).on('click', function() {
+                    self.programmaticallyZoom(this);
+                });
+
+                // Add zoom behavior via buttons
+                this.d3.select(this.$.zoomOut).on('click', function() {
+                    self.programmaticallyZoom(this);
+                });
+            },
+
+            /**
+             * @see https://bl.ocks.org/mbostock/6123708
+             */
+            drawXAxis: function() {
+                var xConfigurations = this.getXAxisConfigurations();
+
+                var xAxisGroup = this.containerLinesAxis
+                    .append('g')
+                        .attr('class', this.axisConfigirations.xAxis.className)
+                        .attr('transform', this.calculateTranslateXAxis())
+                        .style('font-size', this.axisConfigirations.xAxis.fontSize);
+
+                // Draw x axis grid lines
+                if (this.axisConfigirations.xAxis.drawGridLines) {
+                    this.drawXAxisLines(xAxisGroup);
+                }
+
+                // Add x Axis
+                xAxisGroup.call(xConfigurations);
+
+                if (this.axisConfigirations.xAxis.drawArrowHead) {
+                    // Draw axis left marker
+                    // App.Interactions.Graphs.D3.Behaviors.ScaleLinear
+                    this.drawAxisArrowMarker(
+                        xAxisGroup,
+                        {
+                            'marker-start': 'url(#axis-left-marker)'
+                        }
+                    );
+
+                    // Draw axis right marker
+                    // App.Interactions.Graphs.D3.Behaviors.ScaleLinear
+                    this.drawAxisArrowMarker(
+                        xAxisGroup,
+                        {
+                            'marker-end': 'url(#axis-right-marker)'
+                        }
+                    );
+                }
+            },
+
+            /**
+             * @see https://bl.ocks.org/mbostock/6123708
+             */
+            drawYAxis: function() {
+                var yConfigurations = this.getYAxisConfigurations();
+
+                var yAxisGroup = this.containerLinesAxis.append('g')
+                    .attr('class', this.axisConfigirations.yAxis.className)
+                    .attr('transform', this.calculateTranslateYAxis())
+                    .style('font-size', this.axisConfigirations.yAxis.fontSize);
+
+                // Draw y axis grid lines
+                if (this.axisConfigirations.yAxis.drawGridLines) {
+                    this.drawYAxisLines(yAxisGroup);
+                }
+
+                // Add x Axis
+                yAxisGroup.call(yConfigurations);
+
+                // App.Interactions.Graphs.D3.Behaviors.ScaleLinear
+                if (this.axisConfigirations.yAxis.drawArrowHead) {
+                    // Draw axis top marker
+                    // App.Interactions.Graphs.D3.Behaviors.ScaleLinear
+                    this.drawAxisArrowMarker(
+                        yAxisGroup,
+                        {
+                            // 'marker-start': 'url(#open-arrow-start-top)'
+                            'marker-start': 'url(#axis-top-marker)'
+                        }
+                    );
+
+                    // Draw axis bottom marker
+                    // App.Interactions.Graphs.D3.Behaviors.ScaleLinear
+                    this.drawAxisArrowMarker(
+                        yAxisGroup,
+                        {
+                            'marker-end': 'url(#axis-bottom-marker)'
+                        }
+                    );
+                }
+            },
+
+            /**
+             * Draw horizontal lines
+             *
+             * @see https://bl.ocks.org/mbostock/6123708
+             * @see https://github.com/d3/d3-array/blob/master/README.md#range
+             *
+             * @param {Object} xAxisGroup
+             */
+            drawXAxisLines: function(xAxisGroup) {
+                var startPosition = -Math.abs(this.dimensions.width / 2);
+                var endPoint = (this.dimensions.height / 2) +
+                    this.axisConfigirations.xAxis.stepBetweenLines;
+
+                // Add lines
+                xAxisGroup
+                    .selectAll('line')
+                        .data(this.d3.range(
+                            startPosition, // start
+                            endPoint, // stop
+                            this.axisConfigirations.xAxis.stepBetweenLines // step
+                        ))
+                    .enter()
+                        .append('line')
+                            .attr('class', 'axis-line')
+                            .attr('x1', 0)
+                            .attr('y1', function(point) { return point; })
+                            .attr('x2', this.dimensions.width)
+                            .attr('y2', function(point) { return point; });
+            },
+
+            /**
+             * Draw vertical lines
+             *
+             * @see https://bl.ocks.org/mbostock/6123708
+             * @see https://github.com/d3/d3-array/blob/master/README.md#range
+             *
+             * @param {Object} yAxisGroup
+             */
+             drawYAxisLines: function(yAxisGroup) {
+                 var startPosition = -Math.abs(this.dimensions.height / 2);
+                 var endPoint = (this.dimensions.width / 2) +
+                    this.axisConfigirations.yAxis.stepBetweenLines;
+
+                 // Add lines
+                 yAxisGroup
+                     .selectAll('line')
+                         .data(this.d3.range(
+                             startPosition, // start
+                             endPoint, // stop
+                             this.axisConfigirations.yAxis.stepBetweenLines // step
+                         ))
+                     .enter()
+                         .append('line')
+                             .attr('class', 'axis-line')
+                             .attr('x1', function(point) { return point; })
+                             .attr('y1', 0)
+                             .attr('x2', function(point) { return point; })
+                             .attr('y2', this.dimensions.height);
+             },
+
+            /**
+             * @see https://github.com/d3/d3-3.x-api-reference/blob/master/SVG-Axes.md
+             * @see https://www.dashingd3js.com/d3js-axes
+             * @see http://bl.ocks.org/slnader/9452976
+             */
+            getXAxisConfigurations: function() {
+                var range = [0, this.dimensions.width];
+
+                // Create the Scale we will use for the Axis
+                var axisHorizontalScale = this.drawScaleLinear(
+                    this.axisConfigirations.xAxis.domain,
+                    range
+                );
+
+                // Add reference to horizontal scale
+                this.axis.xAxis.scale = axisHorizontalScale;
+
+                // Generate tick values
+                var tickValues = this.generateTickValues(
+                    this.axisConfigirations.xAxis.maximumValue,
+                    this.axisConfigirations.xAxis.tickStep,
+                    this.axisConfigirations.xAxis.displayZero
+                );
+
+                // Create the Axis
+                var xAxis = this.d3.svg.axis()
+                    .scale(axisHorizontalScale)
+                    .tickValues(tickValues)
+                    .orient('bottom');
+
+                return xAxis;
+            },
+
+            /**
+             *
+             * @see https://github.com/d3/d3-3.x-api-reference/blob/master/SVG-Axes.md
+             * @see https://www.dashingd3js.com/d3js-axes
+             * @see http://bl.ocks.org/slnader/9452976
+             */
+            getYAxisConfigurations: function() {
+                var range = [0, this.dimensions.height];
+
+                // Create the Scale we will use for the Axis
+                var axisVerticalScale = this.drawScaleLinear(
+                    this.axisConfigirations.yAxis.domain,
+                    range
+                );
+
+                // Add reference to vertical scale
+                this.axis.yAxis.scale = axisVerticalScale;
+
+                // Generate tick values
+                var tickValues = this.generateTickValues(
+                    this.axisConfigirations.yAxis.maximumValue,
+                    this.axisConfigirations.yAxis.tickStep,
+                    this.axisConfigirations.yAxis.displayZero
+                );
+
+                var yAxis = this.d3.svg.axis()
+                    .scale(axisVerticalScale)
+                    .tickValues(tickValues)
+                    .orient('left');
+
+                return yAxis;
+            },
+
+            calculateTranslateXAxis: function() {
+                var translate = (this.dimensions.width / 2);
+                var translateStyleProperty = 'translate(0, ' + translate + ')'
+
+                return translateStyleProperty;
+            },
+
+            calculateTranslateYAxis: function() {
+                var translate = (this.dimensions.height / 2);
+                var translateStyleProperty = 'translate(' + translate + ', 0)';
+
+                return translateStyleProperty;
+            },
+
+            /**
+             * @see https://github.com/d3/d3-3.x-api-reference/blob/master/SVG-Axes.md
+             *
+             * @param {Integer} maximumValue
+             * @param {Integer} tickStep
+             * @param {Integer} displayZero
+             */
+            generateTickValues: function(maximumValue, tickStep, displayZero) {
+                // Get negative values
+                var negativeTickValues = this.generateNegativeTickValues(
+                    maximumValue,
+                    tickStep
+                );
+
+                // Get positive values
+                var positiveTickValues = this.generatePositiveTickValues(
+                    maximumValue,
+                    tickStep
+                );
+
+
+                var tickValues = negativeTickValues;
+                if (displayZero) {
+                    // Merge negative values and add zero
+                    var tickValues = tickValues.concat([0]);
+                }
+
+                // Merge positive values
+                tickValues = tickValues.concat(positiveTickValues);
+
+                return tickValues;
+            },
+
+            /**
+             * @param {Integer} maximumValue
+             * @param {Integer} tickStep
+             */
+            generateNegativeTickValues: function(maximumValue, tickStep) {
+                // https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Array/map
+                var tickValues =
+                    this.generatePositiveTickValues(maximumValue, tickStep)
+                    .reverse()
+                    .map(function(item) {
+                        return -Math.abs(item);
+                    });
+
+                return tickValues;
+            },
+
+            /**
+             * @param {Integer} maximumValue
+             * @param {Integer} tickStep
+             */
+            generatePositiveTickValues: function(maximumValue, tickStep) {
+                var tickValues = [];
+
+                for (var num = tickStep; num < maximumValue; num = num + tickStep) {
+                    tickValues.push(Math.abs(num));
+                }
+
+                return tickValues;
+            },
+        };
+    });
+</script>
