@@ -1,8 +1,12 @@
-Polymer and d3js version
+# Polymer and d3js version
 
-Polymer version version 1
+I've worked on this project between: 
+- July 2016 - September 2016
+- November 2016 - Feb 2017
+- April 2017
 
-Project is using version d3js version 3
+Project has an education target: Students between third and fifth degree.
 
+### Technical informaiton:
 
-
+Project is using two main libraries: Polymer version 1 and d3js.
